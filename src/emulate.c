@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#define MEMORYSIZE (2 * (2 << 20))
+#define MEMORYSIZE 2 << 20
 #define NUMBERGENERALREGISTERS 31
 
 //TODO(the registers only take <= 64 bits currently this is unchecked)
@@ -21,7 +21,7 @@ initialPstate = {false, true, false, false};
 // The processor structure stores the registers and memory
 // Used for the CPU
 typedef struct {
-    int memory[MEMORYSIZE];
+    u_int memory[MEMORYSIZE];
     int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const int ZR; // zero register
     int PC; // program counter
@@ -54,9 +54,8 @@ bool binaryFileLoader(char *fileName){
     }
 
     int currentMemoryAddress = 0;
-    int ch;
+    u_int ch;
     while( (ch = getc(file)) != EOF ) {
-        // write char into memory
         CPU.memory[currentMemoryAddress] = ch;
         currentMemoryAddress ++;
     }
@@ -66,8 +65,17 @@ bool binaryFileLoader(char *fileName){
 }
 
 int main(int argc, char **argv) {
+    
     setupCPU();
-    // TODO(Call binary file loader with file path && check it is a success (== 0))
+    
+    if (argc > 1) {
+        if (!binaryFileLoader(argv[1])){
+            printf("binary file loader failed on file %s\n", argv[1]);
+            exit(1);
+        }
+    }
+    printf("%s", *argv);
+
     return EXIT_SUCCESS;
 }
 
