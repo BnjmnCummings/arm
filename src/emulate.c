@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#define MEMORYSIZE (2 << 20)
+#define MEMORYSIZE 2 << 20
 #define NUMBERGENERALREGISTERS 31
 
 //TODO(the registers only take <= 64 bits currently this is unchecked)
