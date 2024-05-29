@@ -4,10 +4,6 @@
 #define MEMORYSIZE (2 * (2 << 20))
 #define NUMBERGENERALREGISTERS 31
 
-int main(int argc, char **argv) {
-  return EXIT_SUCCESS;
-}
-
 //TODO(the registers only take <= 64 bits currently this is unchecked)
 
 // Contains condition flags about the last result
@@ -32,30 +28,51 @@ typedef struct {
     // int SP; // stack pointer (Un-needed)
     struct pstate PSTATE; // Processor State Register
 } processor;
-
 // ZR must be initialised here as it is const
 processor CPU = {.ZR = 0};
 
 // TODO(figure out correct initialisation)
+// setupCPU is a function taking no arguments
+// It initializes the registers in the CPU to the correct starting values
+// It returns nothing
 void setupCPU(){
     CPU.PC = 0;
     CPU.PSTATE = initialPstate;
 }
 
-void binaryFileLoader(char *filePath){
-    FILE *file = fopen(filePath, "r");
 
+
+// binaryFileLoader is a function taking the filename as an argument
+// It copies the contents of the file into the CPU's memory
+// It returns true on a successful execution, false otherwise
+bool binaryFileLoader(char *fileName){
+
+    FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        // error msg
-        exit(1);
+        fprintf( stderr, "Can't read given file\n" );
+        return false;
     }
 
-    //TODO(Write the file into CPU memory)
+    int currentMemoryAddress = 0;
+    int ch;
+    while( (ch = getc(file)) != EOF ) {
+        // write char into memory
+        CPU.memory[currentMemoryAddress] = ch;
+        currentMemoryAddress ++;
+    }
+
+    fclose(file);
+    return true;
 }
 
+int main(int argc, char **argv) {
+    setupCPU();
+    // TODO(Call binary file loader with file path && check it is a success (== 0))
+    return EXIT_SUCCESS;
+}
 
 /* TODO( complete all the below sections for the emulator)
- IN PROGRESS: binary file loader - create a function that takes in a (binary)
+ NEEDS TESTING: binary file loader - create a function that takes in a (binary)
  file location and reads it into memory
 
  write emulator loop:
