@@ -2,34 +2,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
+#include "filewriter.h"
+#include "processor.h"
 
-#define MEMORYSIZE 2 << 20
-#define NUMBERGENERALREGISTERS 31
 #define BYTESIZE 8
 
-//TODO(the registers only take <= 64 bits currently this is unchecked)
-
-// Contains condition flags about the last result
-// Used for the Processor State Register
-struct pstate{
-    bool Negative; // Negative condition flag
-    bool Zero; // Zero condition flag
-    bool Carry; // Carry condition flag
-    bool Overflow; // Overflow condition flag
-}
-
 // TODO(figure out correct initialisation)
-initialPstate = {false, true, false, false};
-// The processor structure stores the registers and memory
-// Used for the CPU
-typedef struct {
-    u_int memory[MEMORYSIZE];
-    int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
-    const int ZR; // zero register
-    int PC; // program counter
-    // int SP; // stack pointer (Un-needed)
-    struct pstate PSTATE; // Processor State Register
-} processor;
+pstate initialPstate = {false, true, false, false};
+
 // ZR must be initialised here as it is const
 processor CPU = {.ZR = 0};
 
@@ -145,6 +125,9 @@ bool conditionalBranch(u_int splitWord[]){
     return true;
 }
 
+// fDECycle is a function that takes no inputs
+// It simulates the FDE cycle using other helper functions for each instruction
+// It returns 0 on a successfull run or an error code (0 < num < 8) on a fail with a relevent message
 int fDECycle(void){
     bool halt = false;
     while (!halt){
@@ -341,6 +324,16 @@ int main(int argc, char **argv) {
         printf("FDE cycle failed with error code %d\n", e);
         exit(2);
     }
+
+    //for file writer
+    // Initialize memory array for testing
+    for(int i = 0; i < 4; i++) {
+        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
+    }
+//    printNonZeroMemory();
+//    int arr[] = {1,2,3,4};
+//    printf("%x", combineLittleEndian(arr));
+    printCPU(&CPU);
 
     return EXIT_SUCCESS;
 }
