@@ -68,7 +68,7 @@ bool binaryFileLoader(char *fileName){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticInstruction(u_int splitWord[]){
-    //TODO(Implement handling of arithmetic instruction
+    //TODO(Implement handling of arithmetic instruction, Note you will need to further split input)
     return true;
 }
 
@@ -76,7 +76,7 @@ bool arithmeticInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool wideMoveInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a wide move instruction
+    //TODO(Implement handling of a wide move instruction, Note you will need to further split input)
     return true;
 }
 
@@ -84,7 +84,7 @@ bool wideMoveInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool multiplyInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a multiply instruction
+    //TODO(Implement handling of a multiply instruction, Note you will need to further split input)
     return true;
 }
 
@@ -92,7 +92,7 @@ bool multiplyInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a arithmetic shift instruction
+    //TODO(Implement handling of an arithmetic shift instruction, Note you will need to further split input)
     return true;
 }
 
@@ -100,7 +100,7 @@ bool arithmeticShiftInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool logicalShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a logical shift instruction
+    //TODO(Implement handling of a logical shift instruction, Note you will need to further split input)
     return true;
 }
 
@@ -108,19 +108,42 @@ bool logicalShiftInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool loadLiteralInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a load literal instruction
+    //TODO(Implement handling of a load literal instruction, Note you will need to further split input)
     return true;
 }
 // singleDataTransferInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool singleDataTransferInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a single data transfer instruction
+    //TODO(Implement handling of a single data transfer instruction, Note you will need to further split input)
     // Advise that this checks the offset and then calls the respective function
     // Make these funcitons yourself so you can set them up how you want
     return true;
 }
 
+// unconditionalBranch is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool unconditionalBranch(u_int splitWord[]){
+    //TODO(Implement handling of an unconditional branch instruction, Note you will need to further split input)
+    return true;
+}
+
+// registerBranch is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool registerBranch(u_int splitWord[]){
+    //TODO(Implement handling of a register branch instruction, Note you will need to further split input)
+    return true;
+}
+
+// conditionalBranch is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool conditionalBranch(u_int splitWord[]){
+    //TODO(Implement handling of a conditional branch instruction, Note you will need to further split input)
+    return true;
+}
 int main(int argc, char **argv) {
     
     setupCPU();
@@ -168,7 +191,32 @@ int main(int argc, char **argv) {
         u_int op0 = ((15 << 24) & word) >> 24;
         // 101x -> Branch group
         if ((op0 & 14) == 10) {
-            //TODO(Decode then execute as branch)
+            // Decode to: sf, bit, op0+, 'operand'
+            // TODO(Replace with hashmap if possible)
+            u_int splitInstruction[] = {
+                    word >> 31,
+                    ((1 << 30) & word) >> 30,
+                    ((15 << 26) & word) >> 26,
+                    ((7 << 23) & word) >> 23,
+                    ((((2 << 19) - 1) << 5) & word) >> 5,
+                    ((2 << 26) - 1) & word
+            };
+            assert(splitInstruction[2] == 5);
+
+            if ((splitInstruction[0] || splitInstruction[1]) == 0) {
+                unconditionalBranch(splitInstruction);
+            }
+            else if ((splitInstruction[0] && splitInstruction[1]) == 1) {
+                registerBranch(splitInstruction);
+            }
+            else if (splitInstruction[0] == 0 && splitInstruction[1] == 1) {
+                conditionalBranch(splitInstruction);
+            }
+            // no matching instruction throws error code 4
+            else {
+                printf("No branch instruction matching bit 31 and bit 30 values: %d, %d\n", splitInstruction[0], splitInstruction[1]);
+                exit(4);
+            }
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
@@ -196,11 +244,11 @@ int main(int argc, char **argv) {
                     wideMoveInstruction(splitInstruction);
                     break;
                 }
-                // no matching instruction throws error code 4
+                // no matching instruction throws error code 5
                 default: {
                     // TODO( Use the variable being switched on instead of recalculating)
                     printf("No data processing (immediate) instruction matching opi value: %d\n", splitInstruction[3]);
-                    exit(4);
+                    exit(5);
                 }
             }
         }
@@ -233,18 +281,18 @@ int main(int argc, char **argv) {
                 else if ((9 & splitInstruction[5]) == 8) {
                     arithmeticShiftInstruction(splitInstruction);
                 }
-                // no matching instruction throws error code 5
+                // no matching instruction throws error code 6
                 else {
                     // TODO(make a more general error code thrower to stop repeats like this)
                     printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
-                    exit(5);
+                    exit(6);
                 }
             }
-            // no matching instruction throws error code 5
+            // no matching instruction throws error code 6
             else {
                 // TODO( Use the variable being switched on instead of recalculating)
                 printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
-                exit(5);
+                exit(6);
             }
         }
         // x1x0 -> Loads and stores group
@@ -268,20 +316,19 @@ int main(int argc, char **argv) {
             else if ((splitInstruction[0] || splitInstruction[2] || splitInstruction[4]) == 0) {
                singleDataTransferInstruction(splitInstruction);
             }
-            // no matching instruction throws error code 6
+            // no matching instruction throws error code 7
             else {
-                // TODO( Use the variable being switched on instead of recalculating)
                 printf("No load or store instruction matching bit 31, 29 and U values: %d, %d, %d\n", splitInstruction[0], splitInstruction[2], splitInstruction[4]);
-                exit(6);
+                exit(7);
             }
         }
-        // No matching group so throw error code 7
+        // No matching group so throw error code 8
         else {
             printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
-            exit(7);
+            exit(8);
         }
 
-        // Temp ending ensurance TODO(remove when termination tested)
+        // Temp ending insurance TODO(remove when termination tested)
         halt = true;
     }
 
