@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #define MEMORYSIZE 2 << 20
 #define NUMBERGENERALREGISTERS 31
+#define BYTESIZE 8
 
 //TODO(the registers only take <= 64 bits currently this is unchecked)
 
@@ -75,12 +76,33 @@ int main(int argc, char **argv) {
 
     bool halted = false;
     while (!halted){
+
         //TODO(Fetch)
         int pcValue = CPU.PC;
-        // read word in reverse as little endian mode
-        u_int word[] = {CPU.memory[pcValue + 3],CPU.memory[pcValue + 2],CPU.memory[pcValue + 1],CPU.memory[pcValue] };
+
+        // Throw error code 2 if pc value points to outside memory
+        //TODO(if pc becomes unsigned int remove the <0 check)
+        if (pcValue > (MEMORYSIZE - 3) || pcValue < 0){
+            printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
+            exit(2);
+        }
+
+        // Throw error code 3 if pc points to a memory location not at the start of a word
+        if (pcValue % 4 != 0){
+            printf("fetch failed on nonaligned memory location with pc value: %d\n", pcValue);
+            exit(3);
+        }
+
+        // read word in little endian
+        //u_int word = CPU.memory[pcValue] << (BYTESIZE * 3) & CPU.memory[pcValue + 1] << (BYTESIZE * 2) & CPU.memory[pcValue + 2] << (BYTESIZE ) & CPU.memory[pcValue + 3];
+        u_int word = CPU.memory[pcValue + 3];
+        for (int i = 1; i < 4; i++){
+            word &= CPU.memory[pcValue + 3 - i] << (BYTESIZE * i);
+        }
 
         //TODO(DECODE)
+        u_int op0 = (15 << 24) & word;
+
         //TODO(EXECUTE)
         halted = true;
     }
