@@ -10,9 +10,9 @@
 
 //takes in a pointer to the LSB
 //returns the value of the 4-byte long integer
-static int combineLittleEndian(u_int *arr) {
+static u_int combineLittleEndian(u_int *arr) {
 
-    int total = 0;
+    u_int total = 0;
 
     for(int i = 0; i<4; i++) {
         total += (*arr++) << (i*8);
@@ -77,3 +77,18 @@ void printCPU(processor CPU) {
     printf("Non-Zero memory:\n");
     printNonZeroMemory(CPU);
 }
+
+//int main() {
+//    pstate initialPstate = {false, true, false, false};
+//
+//    processor CPU = {.ZR = 0};
+//    CPU.PC = 0;
+//    CPU.PSTATE = initialPstate;
+//
+//    for(int i = 0; i < 4; i++) {
+//        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
+//    }
+//
+//    printCPU(CPU);
+//    return 0;
+//}
