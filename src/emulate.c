@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <assert.h>
+
 #define MEMORYSIZE 2 << 20
 #define NUMBERGENERALREGISTERS 31
 #define BYTESIZE 8
@@ -21,7 +23,7 @@ initialPstate = {false, true, false, false};
 // The processor structure stores the registers and memory
 // Used for the CPU
 typedef struct {
-    u_int8_t memory[MEMORYSIZE];
+    u_int memory[MEMORYSIZE];
     int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const int ZR; // zero register
     int PC; // program counter
@@ -62,17 +64,33 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
+// arithmeticInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool arithmeticInstruction(u_int splitWord[]){
+    //TODO(Implement handling of arithmetic instruction
+    return true;
+}
+
+// wideMoveInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool wideMoveInstruction(u_int splitWord[]){
+    //TODO(Implement handling of a wide move instruction
+    return true;
+}
+
 int main(int argc, char **argv) {
     
     setupCPU();
-    
+
+    // Read from the file
     if (argc > 1) {
         if (!binaryFileLoader(argv[1])){
             printf("binary file loader failed on file %s\n", argv[1]);
             exit(1);
         }
     }
-    printf("%s", *argv);
 
     bool halt = false;
     while (!halt){
@@ -113,7 +131,30 @@ int main(int argc, char **argv) {
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
-            //TODO(Decode then execute as data processing immediate)
+            // Decode to: sf, opc, 100, opi, operand, rd
+            // TODO(Replace with hashmap if possible)
+            u_int splitInstruction[] = {word >> 31, ((3 << 29) & word) >> 29, ((7 << 26) & word) >> 26, ((7 << 23) & word) >> 23, ((((2 << 19) - 1) << 5) & word) >> 5, 31 & word};
+            assert(splitInstruction[2] == 4);
+
+            //Switch on opi
+            switch (splitInstruction[3]){
+                // opi is 010, then the instruction is an arithmetic instruction
+                case (2): {
+                    arithmeticInstruction(&word);
+                    break;
+                }
+                // opi is 101, then the instruction is a wide move
+                case (5): {
+                    wideMoveInstruction(&word);
+                    break;
+                }
+                // no matching instruction throws error code 4
+                default: {
+                    // TODO( Use the variable being switched on instead of recalculating)
+                    printf("No data processing (immediate) instruction matching opi value: %d\n", splitInstruction[3]);
+                    exit(4);
+                }
+            }
         }
         // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
@@ -123,10 +164,10 @@ int main(int argc, char **argv) {
         else if ((op0 & 5) == 4) {
             //TODO(Decode then execute as loads and stores)
         }
-        // No matching group so throw error code 4
+        // No matching group so throw error code 5
         else {
             printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
-            exit(4);
+            exit(5);
         }
 
         // Temp ending ensurance TODO(remove when termination tested)
