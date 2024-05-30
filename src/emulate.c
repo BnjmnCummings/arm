@@ -144,18 +144,8 @@ bool conditionalBranch(u_int splitWord[]){
     //TODO(Implement handling of a conditional branch instruction, Note you will need to further split input)
     return true;
 }
-int main(int argc, char **argv) {
-    
-    setupCPU();
 
-    // Read from the file
-    if (argc > 1) {
-        if (!binaryFileLoader(argv[1])){
-            printf("binary file loader failed on file %s\n", argv[1]);
-            exit(1);
-        }
-    }
-
+int fDECycle(void){
     bool halt = false;
     while (!halt){
 
@@ -166,13 +156,13 @@ int main(int argc, char **argv) {
         //TODO(if pc becomes unsigned int remove the <0 check)
         if (pcValue > (MEMORYSIZE - 3) || pcValue < 0){
             printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
-            exit(2);
+            return 2;
         }
 
         // Throw error code 3 if pc points to a memory location not at the start of a word
         if (pcValue % 4 != 0){
             printf("fetch failed on nonaligned memory location with pc value: %d\n", pcValue);
-            exit(3);
+            return 3;
         }
 
         // read word in little endian
@@ -183,7 +173,7 @@ int main(int argc, char **argv) {
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
-            halt = true;
+            break;
         }
 
         // Decode:
@@ -212,13 +202,13 @@ int main(int argc, char **argv) {
             else if (splitInstruction[0] == 0 && splitInstruction[1] == 1) {
                 conditionalBranch(splitInstruction);
             }
-            // no matching instruction throws error code 4
+                // no matching instruction throws error code 4
             else {
                 printf("No branch instruction matching bit 31 and bit 30 values: %d, %d\n", splitInstruction[0], splitInstruction[1]);
-                exit(4);
+                return 4;
             }
         }
-        // 100x -> Data processing (immediate) group
+            // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
@@ -239,20 +229,20 @@ int main(int argc, char **argv) {
                     arithmeticInstruction(splitInstruction);
                     break;
                 }
-                // opi is 101, then the instruction is a wide move
+                    // opi is 101, then the instruction is a wide move
                 case (5): {
                     wideMoveInstruction(splitInstruction);
                     break;
                 }
-                // no matching instruction throws error code 5
+                    // no matching instruction throws error code 5
                 default: {
                     // TODO( Use the variable being switched on instead of recalculating)
                     printf("No data processing (immediate) instruction matching opi value: %d\n", splitInstruction[3]);
-                    exit(5);
+                    return 5;
                 }
             }
         }
-        // x101 -> Data processing (register) group
+            // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
@@ -281,21 +271,21 @@ int main(int argc, char **argv) {
                 else if ((9 & splitInstruction[5]) == 8) {
                     arithmeticShiftInstruction(splitInstruction);
                 }
-                // no matching instruction throws error code 6
+                    // no matching instruction throws error code 6
                 else {
                     // TODO(make a more general error code thrower to stop repeats like this)
                     printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
-                    exit(6);
+                    return 6;
                 }
             }
-            // no matching instruction throws error code 6
+                // no matching instruction throws error code 6
             else {
                 // TODO( Use the variable being switched on instead of recalculating)
                 printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
-                exit(6);
+                return 6;
             }
         }
-        // x1x0 -> Loads and stores group
+            // x1x0 -> Loads and stores group
         else if ((op0 & 5) == 4) {
             // Decode to: bit, sf, bit, op0+, U, 'operand', rt
             // TODO(Replace with hashmap if possible)
@@ -314,22 +304,42 @@ int main(int argc, char **argv) {
                 loadLiteralInstruction(splitInstruction);
             }
             else if ((splitInstruction[0] || splitInstruction[2] || splitInstruction[4]) == 0) {
-               singleDataTransferInstruction(splitInstruction);
+                singleDataTransferInstruction(splitInstruction);
             }
-            // no matching instruction throws error code 7
+                // no matching instruction throws error code 7
             else {
                 printf("No load or store instruction matching bit 31, 29 and U values: %d, %d, %d\n", splitInstruction[0], splitInstruction[2], splitInstruction[4]);
-                exit(7);
+                return 7;
             }
         }
-        // No matching group so throw error code 8
+            // No matching group so throw error code 8
         else {
             printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
-            exit(8);
+            return 8;
         }
 
         // Temp ending insurance TODO(remove when termination tested)
         halt = true;
+    }
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    
+    setupCPU();
+
+    // Read from the file
+    if (argc > 1) {
+        if (!binaryFileLoader(argv[1])){
+            printf("binary file loader failed on file %s\n", argv[1]);
+            exit(1);
+        }
+    }
+
+    int e;
+    if ((e = fDECycle()) != 0){
+        printf("FDE cycle failed with error code %d\n", e);
+        exit(2);
     }
 
     return EXIT_SUCCESS;
@@ -340,21 +350,21 @@ int main(int argc, char **argv) {
  file location and reads it into memory
 
  write emulator loop:
-    simulator of arm execution cycle - want to simulate the fetch and decode
+    UNTESTED: simulator of arm execution cycle - want to simulate the fetch and decode
     of the FDE cycle so something like a:
         DONE: struct for Z/P/S...
         DONE: struct for the CPU initialised once as a global variable - the CPU
-        function made to read the instruction indicated by the CPU state
-        functions to decode different forms of instructions
+        UNTESTED: function made to read the instruction indicated by the CPU state
+        UNTESTED: functions to decode different forms of instructions
 
-    simulate execution of instructions - quite probably a set of functions
+    SETUP: simulate execution of instructions - quite probably a set of functions
     and a massive switch statement that looks at the current instruction and
     just does the necessary operations on the CPU (global instance)
 
-    terminate upon instruction with encoding 0x8a000000 - probably just an added
+    UNTESTED: terminate upon instruction with encoding 0x8a000000 - probably just an added
     condition on the above part
 
-    Upon termination, output the registers values, the PSTATE condition flags, and any non-zero memory to a .out file-
+    IN PROGRESS: Upon termination, output the registers values, the PSTATE condition flags, and any non-zero memory to a .out file-
     simply a long print statement -
         function to output the correct formatting of CPU states
         may need some helper functions to clear things up
