@@ -1,33 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#define MEMORYSIZE 2 << 20
-#define NUMBERGENERALREGISTERS 31
+#include "filewriter.h"
+#include "processor.h"
 
 //TODO(the registers only take <= 64 bits currently this is unchecked)
 
-// Contains condition flags about the last result
-// Used for the Processor State Register
-struct pstate{
-    bool Negative; // Negative condition flag
-    bool Zero; // Zero condition flag
-    bool Carry; // Carry condition flag
-    bool Overflow; // Overflow condition flag
-}
 // TODO(figure out correct initialisation)
-initialPstate = {false, true, false, false};
+pstate initialPstate = {false, true, false, false};
 
-
-// The processor structure stores the registers and memory
-// Used for the CPU
-typedef struct {
-    u_int memory[MEMORYSIZE];
-    int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
-    const int ZR; // zero register
-    int PC; // program counter
-    // int SP; // stack pointer (Un-needed)
-    struct pstate PSTATE; // Processor State Register
-} processor;
 // ZR must be initialised here as it is const
 processor CPU = {.ZR = 0};
 
@@ -39,8 +20,6 @@ void setupCPU(){
     CPU.PC = 0;
     CPU.PSTATE = initialPstate;
 }
-
-
 
 // binaryFileLoader is a function taking the filename as an argument
 // It copies the contents of the file into the CPU's memory
@@ -75,6 +54,16 @@ int main(int argc, char **argv) {
         }
     }
     printf("%s", *argv);
+
+    //for file writer
+    // Initialize memory array for testing
+    for(int i = 0; i < 4; i++) {
+        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
+    }
+//    printNonZeroMemory();
+//    int arr[] = {1,2,3,4};
+//    printf("%x", combineLittleEndian(arr));
+    printCPU(CPU);
 
     return EXIT_SUCCESS;
 }
