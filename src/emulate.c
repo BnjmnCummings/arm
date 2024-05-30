@@ -80,6 +80,30 @@ bool wideMoveInstruction(u_int splitWord[]){
     return true;
 }
 
+// multiplyInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool multiplyInstruction(u_int splitWord[]){
+    //TODO(Implement handling of a multiply instruction
+    return true;
+}
+
+// arithmeticShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool arithmeticShiftInstruction(u_int splitWord[]){
+    //TODO(Implement handling of a arithmetic shift instruction
+    return true;
+}
+
+// logicalShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool logicalShiftInstruction(u_int splitWord[]){
+    //TODO(Implement handling of a logical shift instruction
+    return true;
+}
+
 int main(int argc, char **argv) {
     
     setupCPU();
@@ -126,26 +150,33 @@ int main(int argc, char **argv) {
         //TODO(Add check for termination input)
         u_int op0 = ((15 << 24) & word) >> 24;
         // 101x -> Branch group
-        if ((op0 & 14) == 10){
+        if ((op0 & 14) == 10) {
             //TODO(Decode then execute as branch)
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
-            u_int splitInstruction[] = {word >> 31, ((3 << 29) & word) >> 29, ((7 << 26) & word) >> 26, ((7 << 23) & word) >> 23, ((((2 << 19) - 1) << 5) & word) >> 5, 31 & word};
+            u_int splitInstruction[] = {
+                    word >> 31,
+                    ((3 << 29) & word) >> 29,
+                    ((7 << 26) & word) >> 26,
+                    ((7 << 23) & word) >> 23,
+                    ((((2 << 19) - 1) << 5) & word) >> 5,
+                    31 & word
+            };
             assert(splitInstruction[2] == 4);
 
             //Switch on opi
             switch (splitInstruction[3]){
                 // opi is 010, then the instruction is an arithmetic instruction
                 case (2): {
-                    arithmeticInstruction(&word);
+                    arithmeticInstruction(splitInstruction);
                     break;
                 }
                 // opi is 101, then the instruction is a wide move
                 case (5): {
-                    wideMoveInstruction(&word);
+                    wideMoveInstruction(splitInstruction);
                     break;
                 }
                 // no matching instruction throws error code 4
@@ -158,16 +189,55 @@ int main(int argc, char **argv) {
         }
         // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
-            //TODO(Decode then execute as data processing register)
+            // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
+            // TODO(Replace with hashmap if possible)
+            u_int splitInstruction[] = {
+                    word >> 31,
+                    ((3 << 29) & word) >> 29,
+                    ((1<<28) & word) >> 28,
+                    ((3 << 26) & word) >> 26,
+                    ((1<<25) & word) >> 25,
+                    ((((2 << 5) - 1) << 21) & word) >> 21,
+                    ((((2 << 6) - 1) << 16) & word) >> 16,
+                    ((((2 << 7) - 1) << 10) & word) >> 10,
+                    ((((2 << 5) - 1) << 5) & word) >> 5,
+                    31 & word
+            };
+            assert(splitInstruction[3] == 2);
+            assert(splitInstruction[4] == 1);
+
+            if (splitInstruction[2] == 1 && splitInstruction[5] == 8) {
+                multiplyInstruction(splitInstruction);
+            }
+            else if (splitInstruction[2] == 0) {
+                if ((splitInstruction[5] >> 3) == 0) {
+                    logicalShiftInstruction(splitInstruction);
+                }
+                else if ((9 & splitInstruction[5]) == 8) {
+                    arithmeticShiftInstruction(splitInstruction);
+                }
+                // no matching instruction throws error code 5
+                else {
+                    // TODO(make a more general error code thrower to stop repeats like this)
+                    printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
+                    exit(5);
+                }
+            }
+            // no matching instruction throws error code 5
+            else {
+                // TODO( Use the variable being switched on instead of recalculating)
+                printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
+                exit(5);
+            }
         }
         // x1x0 -> Loads and stores group
         else if ((op0 & 5) == 4) {
             //TODO(Decode then execute as loads and stores)
         }
-        // No matching group so throw error code 5
+        // No matching group so throw error code 6
         else {
             printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
-            exit(5);
+            exit(6);
         }
 
         // Temp ending ensurance TODO(remove when termination tested)
