@@ -14,10 +14,9 @@ struct pstate{
     bool Carry; // Carry condition flag
     bool Overflow; // Overflow condition flag
 }
+
 // TODO(figure out correct initialisation)
 initialPstate = {false, true, false, false};
-
-
 // The processor structure stores the registers and memory
 // Used for the CPU
 typedef struct {
@@ -35,12 +34,10 @@ processor CPU = {.ZR = 0};
 // setupCPU is a function taking no arguments
 // It initializes the registers in the CPU to the correct starting values
 // It returns nothing
-void setupCPU(){
+void setupCPU( void ){
     CPU.PC = 0;
     CPU.PSTATE = initialPstate;
 }
-
-
 
 // binaryFileLoader is a function taking the filename as an argument
 // It copies the contents of the file into the CPU's memory
@@ -76,11 +73,23 @@ int main(int argc, char **argv) {
     }
     printf("%s", *argv);
 
+    bool halted = false;
+    while (!halted){
+        //TODO(Fetch)
+        int pcValue = CPU.PC;
+        // read word in reverse as little endian mode
+        u_int word[] = {CPU.memory[pcValue + 3],CPU.memory[pcValue + 2],CPU.memory[pcValue + 1],CPU.memory[pcValue] };
+
+        //TODO(DECODE)
+        //TODO(EXECUTE)
+        halted = true;
+    }
+
     return EXIT_SUCCESS;
 }
 
 /* TODO( complete all the below sections for the emulator)
- NEEDS TESTING: binary file loader - create a function that takes in a (binary)
+ DONE: binary file loader - create a function that takes in a (binary)
  file location and reads it into memory
 
  write emulator loop:
