@@ -21,7 +21,7 @@ initialPstate = {false, true, false, false};
 // The processor structure stores the registers and memory
 // Used for the CPU
 typedef struct {
-    u_int memory[MEMORYSIZE];
+    u_int8_t memory[MEMORYSIZE];
     int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const int ZR; // zero register
     int PC; // program counter
@@ -74,10 +74,10 @@ int main(int argc, char **argv) {
     }
     printf("%s", *argv);
 
-    bool halted = false;
-    while (!halted){
+    bool halt = false;
+    while (!halt){
 
-        //TODO(Fetch)
+        // Fetch
         int pcValue = CPU.PC;
 
         // Throw error code 2 if pc value points to outside memory
@@ -94,17 +94,43 @@ int main(int argc, char **argv) {
         }
 
         // read word in little endian
-        //u_int word = CPU.memory[pcValue] << (BYTESIZE * 3) & CPU.memory[pcValue + 1] << (BYTESIZE * 2) & CPU.memory[pcValue + 2] << (BYTESIZE ) & CPU.memory[pcValue + 3];
         u_int word = CPU.memory[pcValue + 3];
         for (int i = 1; i < 4; i++){
             word &= CPU.memory[pcValue + 3 - i] << (BYTESIZE * i);
         }
 
-        //TODO(DECODE)
-        u_int op0 = (15 << 24) & word;
+        // check if the instruction is a halt (Untested)
+        if (word == 0x8a000000){
+            halt = true;
+        }
 
-        //TODO(EXECUTE)
-        halted = true;
+        // Decode:
+        //TODO(Add check for termination input)
+        u_int op0 = ((15 << 24) & word) >> 24;
+        // 101x -> Branch group
+        if ((op0 & 14) == 10){
+            //TODO(Decode then execute as branch)
+        }
+        // 100x -> Data processing (immediate) group
+        else if ((op0 & 14) == 8) {
+            //TODO(Decode then execute as data processing immediate)
+        }
+        // x101 -> Data processing (register) group
+        else if ((op0 & 7) == 5) {
+            //TODO(Decode then execute as data processing register)
+        }
+        // x1x0 -> Loads and stores group
+        else if ((op0 & 5) == 4) {
+            //TODO(Decode then execute as loads and stores)
+        }
+        // No matching group so throw error code 4
+        else {
+            printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
+            exit(4);
+        }
+
+        // Temp ending ensurance TODO(remove when termination tested)
+        halt = true;
     }
 
     return EXIT_SUCCESS;
