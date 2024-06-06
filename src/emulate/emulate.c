@@ -23,6 +23,11 @@ void setupCPU( void ){
     CPU.PSTATE = initialPstate;
 }
 
+u_int64_t getMask(int start, int end) {
+    assert(start <= end);
+    return ((u_int64_t) 2 << (end - start)) << start;
+}
+
 // binaryFileLoader is a function taking the filename as an argument
 // It copies the contents of the file into the CPU's memory
 // It returns true on a successful execution, false otherwise
@@ -110,11 +115,100 @@ bool wideMoveInstruction(u_int splitWord[]){
     return true;
 }
 
+u_int64_t shift(int val, int inc, int type, int sf) {
+    u_int64_t res;
+    int maskVal = (32 + (32 * sf) - 1)
+    // lsl shift
+    if (type == 0b00) {
+        res = rm << inc;
+    }
+        // lsr shift
+    else if (type == 0b01) {
+        res = rm >> inc;
+    }
+    // asr shift
+    else if (type == 0b10) {
+        res = rm >> inc;
+        if (rm >> maskVal) {
+            res += getMask(maskVal - inc, maskVal);
+        }
+    }
+    // ror shift
+    else {
+        res = rm >> inc;
+        res += getMask(0, inc) << (maskVal - inc);
+    }
+    return res;
+}
+
+bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool negate) {
+    if (negate) {
+        op = ~op
+    }
+    switch (opc) {
+        case 0b00: // Bitwise M
+            writeRegister(sf, rd, rn & op);
+            break;
+        case 0b01:
+            writeRegister(sf, rd, rn | op);
+            break;
+        case 0b10:
+            writeRegister(sf, rd, rn ^ op);
+            break;
+        case 0b11:
+            writeRegister(sf, rd, rn & op);
+            CPU.PSTATE.Negative = (rn & op) >> (32 + (32 * sf) - 1);
+            CPU.PSTATE.Zero = (rn & op) == 0;
+            break;
+    }
+    return true;
+}
+
 // multiplyInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool multiplyInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a multiply instruction, Note you will need to further split input)
+    //TODO(Assertions for opc and opr)
+    u_int negate = splitWord[5] & 0x1;
+    u_int sf = splitWord[0];
+
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+
+    u_int x = splitWord[7] >> 5;
+    u_int ra = splitWord[7] & 0b011111;
+
+    if (x) {
+        writeRegister(sf, splitWord[9], ra - (rn * rm));
+    } else {
+        writeRegister(sf, splitWord[9], ra + (rn * rm));
+    }
+    return true;
+}
+
+// logicalShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool logicalShiftInstruction(u_int splitWord[]) {
+    //TODO(Implement handling of a logical shift instruction, Note you will need to further split input)
+    u_int opc = splitWord[1];
+    u_int shift = (splitWord[5] >> 2) & 0x3;
+    u_int negate = splitWord[5] & 0x1;
+    u_int sf = splitWord[0];
+    u_int64_t firstOp = splitWord[7];
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+
+    if (!sf) {
+        firstOp &= 31
+    }
+
+    u_int64_t secOp = shift(rm, firstOp, shift, sf);
+
+    registerParser(opc, splitWord[9], rn, secOp, sf, negate);
+
+    CPU.PSTATE.Carry = 0;
+    CPU.PSTATE.Overflow = 0;
     return true;
 }
 
@@ -122,42 +216,8 @@ bool multiplyInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of an arithmetic shift instruction, Note you will need to further split input)
-    return true;
-}
-
-// logicalShiftInstruction is a function taking the split instruction (word) as argument
-// It completed the instruction on the CPU
-// It returns true on a successful execution, false otherwise
-bool logicalShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a logical shift instruction, Note you will need to further split input)
-    u_int opc = splitWord[1];
-    u_int shift = (splitWord[5] >> 2) & 0x3;
-    u_int nVal = splitWord[5] & 0x1;
-    u_int sf = splitWord[0]
-    u_int firstOp = splitWord[7]
-    u_int rn;
-    u_int rm;
-    u_int secOp;
-    if (sf) {
-        firstOp;
-    } else {
-
-    }
-    // lsl shift
-    if (shift == 0b00) {
-        secOp = rm << firstOp;
-    }
-        // lsr and asr shift
-    else if ((shift == 0b01) || (shift == 0b10)) {
-        secOp = rm >> firstOp;
-    }
-    else {
-        secOp =
-    }
-    if (opc == 0b00) {
-
-    }
+    logicalShiftInstruction(splitWord[]);
+    //TODO(set arithmetic PSTATE flags)
     return true;
 }
 
@@ -375,7 +435,7 @@ int fDECycle(void){
 
         // Throw error code 2 if pc value points to outside memory
         //TODO(if pc becomes unsigned int remove the <0 check)
-        if (pcValue > (MEMORYSIZE - 3) || pcValue < 0){
+        if (pcValue > ((MEMORYSIZE) - 3) || pcValue < 0){
             printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
             return 2;
         }
