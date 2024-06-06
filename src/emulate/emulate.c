@@ -46,40 +46,44 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
+uint64_t readRegister(bool in64BitMode, u_int registerNumb) {
+    return 0;
+};
+bool writeRegister(bool in64BitMode, u_int registerNumb, uint64_t result) {
+    return 0;
+};
+
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticInstruction(u_int splitWord[]){
     u_int operand[] = {
         splitWord[4] << 17,
-        ((((1 << 12) - 1) << 5) & splitWord[4]) >> 5,
+        ((((1 << 11) - 1) << 5) & splitWord[4]) >> 5,
         splitWord[4] & 0b11111
     };
-    int op2 = operand[1];
+    uint64_t op2 = operand[1];
     if (operand[0] == 1) {
         op2 = op2 << 12;
     }
-    int rn;
-    if (splitWord[0] == 0) {
-        rn = read32BitModeRegister(operand[2]);
-    } else {
-        rn = read64BitModeRegister(operand[2]);
-    }
+    uint64_t rn = readRegister(splitWord[0], operand[2]);
 
-    int result;
+    uint64_t result;
     switch (splitWord[1])
     {
     //add
     case (0b00):
         result = rn + op2;
         break;
-    //adds
+    //adds 11 - 110000 - 111111
     case (0b01):
         result = rn + op2;
-        CPU.PSTATE.Negative = result < 0;
+        uint64_t sigBitShift = (32 + (32 * splitWord[0]) - 1);
+        int check = (int) rn + (int) op2;
+        CPU.PSTATE.Negative = result >> sigBitShift;
         CPU.PSTATE.Zero = result == 0;
-        CPU.PSTATE.Carry = 0; //TODO - check for carry
-        CPU.PSTATE.Overflow = 0; //TODO - check for overflow
+        CPU.PSTATE.Carry = check >= (1 >> sigBitShift);
+        CPU.PSTATE.Overflow = CPU.PSTATE.Carry;
         break;
     //sub
     case (0b10):
@@ -91,18 +95,14 @@ bool arithmeticInstruction(u_int splitWord[]){
         CPU.PSTATE.Negative = result < 0;
         CPU.PSTATE.Zero = result == 0;
         CPU.PSTATE.Carry = 0; //TODO - check for carry
-        CPU.PSTATE.Overflow = 0; //TODO - check for overflow
+        CPU.PSTATE.Overflow = rn < op2; //TODO - check for overflow
         break;
     default:
         break;
     }
 
     // write to Rd
-    if (splitWord[0] == 0) {
-        write32BitModeRegister(splitWord[5], result);
-    } else {
-        write64BitModeRegister(splitWord[5], result);
-    }
+    writeRegister(splitWord[0], splitWord[5], result);
     
     return true;
 }
@@ -111,33 +111,31 @@ bool arithmeticInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool wideMoveInstruction(u_int splitWord[]){
-        u_int operand[] = {
+    u_int operand[] = {
         splitWord[4] << 16,
-        splitWord[4] & ((1 << 16) - 1)
+        splitWord[4] & ((1 << 15) - 1)
     };
-    int op = operand[1] << (operand[0] * 16);
-    int result;
+    uint64_t sh = operand[0] * 16;
+    int op = operand[1] << sh;
     switch (splitWord[1])
     {
     //movk
     case (0b00):
-        result = ~op;
+        writeRegister(splitWord[0], splitWord[5], ~op);
         break;
     //movz
     case (0b10):
-        result = op;
+        writeRegister(splitWord[0], splitWord[5], op);
         break;
     //movk
-    case (0b11):
-        //TODO(implement movk)
-        break;
-    default:
+    case (0b11):{
+        int rd = readRegister(splitWord[0], splitWord[5]);
+        uint64_t result = (((rd >> (sh + 15) )<< (sh + 15)) | (operand[1] << sh)) | (rd & ((1 << sh) - 1));
+        writeRegister(splitWord[0], splitWord[5], result);
         break;
     }
-    if (splitWord[0] == 0) {
-        write32BitModeRegister(splitWord[5], result);
-    } else {
-        write64BitModeRegister(splitWord[5], result);
+    default:
+        break;
     }
     return true;
 }
