@@ -85,10 +85,10 @@ u_int readMemory(long long memoryAddress){
     return word;
 }
 
-bool writeMemory(long long memoryAddress, int data) {
+bool writeMemory(bool in64BitMode, long long memoryAddress, long long data) {
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
     int byteSizeMask = ((0x1 << BYTESIZE) - 1);
-    for (int i = 0; i < 4; i ++){
+    for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
         CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
     }
     return true;
@@ -149,7 +149,7 @@ bool loadLiteralInstruction(u_int splitWord[]){
     assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
 
     // load the value into the target register and return true
-    CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
+    writeRegister(splitWord[1], targetRegister, readMemory(loadFromAddress));
     return true;
 }
 
@@ -161,6 +161,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 
     // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
     u_int operand = splitWord[5];
+    bool registerMode = splitWord[1];
 
     // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
     u_int brokenDownOperand[] = {
@@ -174,7 +175,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
     assert((0 <= targetRegister) && (targetRegister <= 30));
     u_int xn = brokenDownOperand[3];
     assert((0 <= xn) && (xn <= 30));
-    long long xnValue = CPU.generalPurpose[xn];
+    long long xnValue = readRegister(registerMode, xn);
 
     // U == 1 then unsigned immediate offset
     if (splitWord[4]) {
@@ -187,8 +188,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 
         long long loadFromAddress = xnValue + offset;
         assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
-
-        CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
+        writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
     }
     else {
         u_int offset = brokenDownOperand[2];
@@ -206,12 +206,11 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 
             u_int xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
             assert((0 <= xm) && (xm <= 30));
-            long long xmValue = CPU.generalPurpose[xm];
+            long long xmValue = readMemory(xm);
 
             long long loadFromAddress = xmValue + xnValue;
             assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
-
-            CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
+            writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
         }
         // must be pre/post indexing
         else {
@@ -222,19 +221,18 @@ bool singleDataTransferInstruction(u_int splitWord[]){
                 assert((-256 <= simm9) && (simm9 <= 255));
                 long long readWriteValue = xnValue + simm9;
 
-                CPU.generalPurpose[targetRegister] = CPU.memory[readWriteValue];
-
-                CPU.memory[xnValue] = readWriteValue;
+                writeRegister(registerMode, targetRegister, readMemory(readWriteValue));
+                writeMemory(registerMode, xnValue, readWriteValue);
             }
                 // I must be 0 so post indexed
             else {
                 assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
-                CPU.generalPurpose[targetRegister] = CPU.memory[xnValue];
+                writeRegister(registerMode, targetRegister, readMemory(xnValue));
 
                 assert((-256 <= simm9) && (simm9 <= 255));
                 long long newValue = xnValue + simm9;
 
-                CPU.memory[xnValue] = newValue;
+                writeMemory(registerMode, xnValue, newValue);
             }
         }
         // in this situation a pattern must be matched so error message needed for nothing matching
@@ -255,7 +253,7 @@ bool unconditionalBranch(const u_int splitWord[]){
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
-    CPU.PC = CPU.memory[CPU.PC + offset];
+    CPU.PC = readMemory(CPU.PC + offset);
     return true;
 }
 
@@ -269,7 +267,7 @@ bool registerBranch(u_int splitWord[]){
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    int newPCAddressLocation = CPU.generalPurpose[registerNumb];
+    int newPCAddressLocation = readMemory(registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -285,27 +283,20 @@ bool conditionalBranchConditionCheck(u_int conditionCode){
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
     switch (conditionCode) {
-        case (0x0000): {
+        case (0x0000):
             return (currentPSTATE.Zero);
-        }
-        case (0x0001): {
+        case (0x0001):
             return !(currentPSTATE.Zero);
-        }
-        case (0x1010): {
+        case (0x1010):
             return negativeEqOverflow;
-        }
-        case (0x1011): {
+        case (0x1011):
             return !negativeEqOverflow;
-        }
-        case (0x1100): {
+        case (0x1100):
             return ((!currentPSTATE.Zero) && negativeEqOverflow);
-        }
-        case (0x1101): {
+        case (0x1101):
             return !((!currentPSTATE.Zero) && negativeEqOverflow);
-        }
-        case (0x1110): {
+        case (0x1110):
             return true;
-        }
         default: {
             fprintf(stderr, "In conditionalBranchConditionCheck undefined condition encoding given with value: %d", conditionCode);
             exit(10);
@@ -339,7 +330,7 @@ bool conditionalBranch(u_int splitWord[]){
         assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
         // update the PC value
-        CPU.PC = CPU.memory[CPU.PC + offset];
+        CPU.PC = readMemory(CPU.PC + offset);
     }
     // successful execution no matter the state of condition so return true
     return true;
