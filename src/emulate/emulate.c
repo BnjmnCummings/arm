@@ -24,6 +24,11 @@ void setupCPU( void ){
     CPU.PSTATE = initialPstate;
 }
 
+u_int64_t getMask(int start, int end) {
+    assert(start <= end);
+    return ((u_int64_t) 2 << (end - start)) << start;
+}
+
 // binaryFileLoader is a function taking the filename as an argument
 // It copies the contents of the file into the CPU's memory
 // It returns true on a successful execution, false otherwise
@@ -31,7 +36,7 @@ bool binaryFileLoader(char *fileName){
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        fprintf( stderr, "Can't read given file\n" );
+        fprintf( stderr, "Can't read given input file\n" );
         return false;
     }
 
@@ -88,7 +93,7 @@ u_int32_t readMemory(u_int64_t memoryAddress){
 
 bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data) {
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    u_int32_t byteSizeMask = ((0x1 << BYTESIZE) - 1);
+    u_int32_t byteSizeMask = ((0b1 << BYTESIZE) - 1);
     for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
         CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
     }
@@ -182,11 +187,98 @@ bool wideMoveInstruction(u_int32_t splitWord[]){
     return true;
 }
 
+u_int64_t shift(int val, int inc, int type, int sf) {
+    u_int64_t res;
+    int maskVal = (32 + (32 * sf) - 1);
+    // lsl shift
+    if (type == 0b00) {
+        res = val << inc;
+    }
+        // lsr shift
+    else if (type == 0b01) {
+        res = val >> inc;
+    }
+    // asr shift
+    else if (type == 0b10) {
+        res = val >> inc;
+        if (val >> maskVal) {
+            res += getMask(maskVal - inc, maskVal);
+        }
+    }
+    // ror shift
+    else {
+        res = val >> inc;
+        res += getMask(0, inc) << (maskVal - inc);
+    }
+    return res;
+}
+
+bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool negate) {
+    if (negate) {
+        op = ~op;
+    }
+    switch (opc) {
+        case 0b00: // Bitwise M
+            writeRegister(sf, rd, rn & op);
+            break;
+        case 0b01:
+            writeRegister(sf, rd, rn | op);
+            break;
+        case 0b10:
+            writeRegister(sf, rd, rn ^ op);
+            break;
+        case 0b11:
+            writeRegister(sf, rd, rn & op);
+            CPU.PSTATE.Negative = (rn & op) >> (32 + (32 * sf) - 1);
+            CPU.PSTATE.Zero = (rn & op) == 0;
+            break;
+    }
+    return true;
+}
+
 // multiplyInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool multiplyInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a multiply instruction, Note you will need to further split input)
+    u_int negate = splitWord[5] & 0x1;
+    u_int sf = splitWord[0];
+
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+
+    u_int x = splitWord[7] >> 5;
+    u_int ra = splitWord[7] & 0b011111;
+
+    if (x) {
+        writeRegister(sf, splitWord[9], ra - (rn * rm));
+    } else {
+        writeRegister(sf, splitWord[9], ra + (rn * rm));
+    }
+    return true;
+}
+
+// logicalShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+bool logicalShiftInstruction(u_int splitWord[]) {
+    u_int opc = splitWord[1];
+    u_int shiftMask = (splitWord[5] >> 2) & 0x3;
+    u_int negate = splitWord[5] & 0x1;
+    u_int sf = splitWord[0];
+    u_int64_t firstOp = splitWord[7];
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+
+    if (!sf) {
+        firstOp &= 31;
+    }
+
+    u_int64_t secOp = shift(rm, firstOp, shiftMask, sf);
+
+    registerParser(opc, splitWord[9], rn, secOp, sf, negate);
+
+    CPU.PSTATE.Carry = 0;
+    CPU.PSTATE.Overflow = 0;
     return true;
 }
 
@@ -194,15 +286,8 @@ bool multiplyInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of an arithmetic shift instruction, Note you will need to further split input)
-    return true;
-}
-
-// logicalShiftInstruction is a function taking the split instruction (word) as argument
-// It completed the instruction on the CPU
-// It returns true on a successful execution, false otherwise
-bool logicalShiftInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a logical shift instruction, Note you will need to further split input)
+    logicalShiftInstruction(splitWord);
+    //TODO(set arithmetic PSTATE flags)
     return true;
 }
 
@@ -238,9 +323,9 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
     // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
     u_int32_t brokenDownOperand[] = {
             operand >> 18,
-            ((0x1 << 17) & operand) >> 17,
+            ((0b1 << 17) & operand) >> 17,
             ((((2 << 12) - 1) << 5) & operand) >> 5,
-            (0x11111) & operand
+            (0b11111) & operand
     };
     assert(brokenDownOperand[0] == 0);
     u_int32_t targetRegister = splitWord[6];
@@ -268,15 +353,15 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
         u_int32_t brokenDownOffset[] = {
                 operand >> 11,
                 ((((2 << 8) - 1) << 2) & offset) >> 2,
-                ((0x1 << 1) & operand) >> 1,
-                (0x1) & offset
+                ((0b1 << 1) & operand) >> 1,
+                (0b1) & offset
         };
         assert(brokenDownOffset[0] == brokenDownOffset[3]);
         // Register offset
         if (brokenDownOffset[0]) {
-            assert((0x1111 & brokenDownOffset[1]) == 6);
+            assert((0b1111 & brokenDownOffset[1]) == 6);
 
-            u_int32_t xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
+            u_int32_t xm = (((0b11111) << 4) & brokenDownOffset[1]) >> 4;
             assert((0 <= xm) && (xm <= 30));
             u_int64_t xmValue = readMemory(xm);
 
@@ -355,19 +440,19 @@ bool conditionalBranchConditionCheck(u_int32_t conditionCode){
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
     switch (conditionCode) {
-        case (0x0000):
+        case (0b0000):
             return (currentPSTATE.Zero);
-        case (0x0001):
+        case (0b0001):
             return !(currentPSTATE.Zero);
-        case (0x1010):
+        case (0b1010):
             return negativeEqOverflow;
-        case (0x1011):
+        case (0b1011):
             return !negativeEqOverflow;
-        case (0x1100):
+        case (0b1100):
             return ((!currentPSTATE.Zero) && negativeEqOverflow);
-        case (0x1101):
+        case (0b1101):
             return !((!currentPSTATE.Zero) && negativeEqOverflow);
-        case (0x1110):
+        case (0b1110):
             return true;
         default: {
             fprintf(stderr, "In conditionalBranchConditionCheck undefined condition encoding given with value: %d", conditionCode);
@@ -420,7 +505,7 @@ int fDECycle(void){
 
         // Throw error code 2 if pc value points to outside memory
         //TODO(if pc becomes unsigned int remove the <0 check)
-        if (pcValue > (MEMORYSIZE - 3) || pcValue < 0){
+        if (pcValue > ((MEMORYSIZE) - 3) || pcValue < 0){
             printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
             return 2;
         }
@@ -595,7 +680,7 @@ int fDECycle(void){
 }
 
 int main(int argc, char **argv) {
-    
+
     setupCPU();
 
     // Read from the file
@@ -612,40 +697,18 @@ int main(int argc, char **argv) {
         exit(2);
     }
 
-    //for file writer
-    // Initialize memory array for testing
-    for(int i = 0; i < 4; i++) {
-        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
+    if (argc > 2) {
+        FILE *file = fopen(argv[2], "r");
+
+        if (file == NULL) {
+            fprintf( stderr, "Can't read given output file\n" );
+            exit(11);
+        }
+        writeCPU(file, &CPU);
     }
-//    printNonZeroMemory();
-//    int arr[] = {1,2,3,4};
-//    printf("%x", combineLittleEndian(arr));
-    printCPU(&CPU);
+    else {
+        writeCPU(stdout, &CPU);
+    }
 
     return EXIT_SUCCESS;
 }
-
-/* TODO( complete all the below sections for the emulator)
- DONE: binary file loader - create a function that takes in a (binary)
- file location and reads it into memory
-
- write emulator loop:
-    UNTESTED: simulator of arm execution cycle - want to simulate the fetch and decode
-    of the FDE cycle so something like a:
-        DONE: struct for Z/P/S...
-        DONE: struct for the CPU initialised once as a global variable - the CPU
-        UNTESTED: function made to read the instruction indicated by the CPU state
-        UNTESTED: functions to decode different forms of instructions
-
-    SETUP: simulate execution of instructions - quite probably a set of functions
-    and a massive switch statement that looks at the current instruction and
-    just does the necessary operations on the CPU (global instance)
-
-    UNTESTED: terminate upon instruction with encoding 0x8a000000 - probably just an added
-    condition on the above part
-
-    IN PROGRESS: Upon termination, output the registers values, the PSTATE condition flags, and any non-zero memory to a .out file-
-    simply a long print statement -
-        function to output the correct formatting of CPU states
-        may need some helper functions to clear things up
- */
