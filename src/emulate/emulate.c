@@ -89,7 +89,20 @@ bool logicalShiftInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool loadLiteralInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a load literal instruction, Note you will need to further split input)
+    // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+
+
+    // Note this may need sign extended to 64 bit manually
+    int offset = splitWord[5] * 4;
+
+    // find the new PC value and check validity
+    u_int targetRegister = splitWord[6];
+    assert((0 <= targetRegister) && (targetRegister <= 30));
+    int loadFromAddress = CPU.PC + offset;
+    assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+
+    // load the value into the target register and return true
+    CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
     return true;
 }
 // singleDataTransferInstruction is a function taking the split instruction (word) as argument
@@ -125,7 +138,7 @@ bool unconditionalBranch(const u_int splitWord[]){
 bool registerBranch(u_int splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
-    int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
+    u_int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 30));
@@ -272,7 +285,7 @@ int fDECycle(void){
 
             // No PC increment as these instructions are all branches
         }
-            // 100x -> Data processing (immediate) group
+        // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
@@ -308,7 +321,7 @@ int fDECycle(void){
             // TODO(Replace with macro "increment PC" when in separate file)
             CPU.PC += 4;
         }
-            // x101 -> Data processing (register) group
+        // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
@@ -353,9 +366,9 @@ int fDECycle(void){
             // TODO(Replace with macro "increment PC" when in separate file)
             CPU.PC += 4;
         }
-            // x1x0 -> Loads and stores group
+        // x1x0 -> Loads and stores group
         else if ((op0 & 5) == 4) {
-            // Decode to: bit, sf, bit, op0+, U, 'operand', rt
+            // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
             u_int splitInstruction[] = {
                     word >> 31,
