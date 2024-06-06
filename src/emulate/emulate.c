@@ -39,9 +39,8 @@ bool binaryFileLoader(char *fileName){
         fprintf( stderr, "Can't read given input file\n" );
         return false;
     }
-
     int currentMemoryAddress = 0;
-    u_int32_t ch;
+    u_int ch;
     while( (ch = getc(file)) != EOF ) {
         CPU.memory[currentMemoryAddress] = ch;
         currentMemoryAddress ++;
@@ -84,10 +83,11 @@ bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
 // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
 u_int32_t readMemory(u_int64_t memoryAddress){
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    u_int32_t word = CPU.memory[memoryAddress + 3] << (BYTESIZE * 3);
-    for (int i = 2; i >= 0; i--){
-        word &= CPU.memory[memoryAddress + i] << (BYTESIZE * i);
+    uint32_t word = 0;
+    for (int i = 0; i < 4; i++) {
+        word += CPU.memory[memoryAddress + i] << (BYTESIZE * i);
     }
+    printf("%u\n", word);
     return word;
 }
 
@@ -240,7 +240,6 @@ bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool n
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool multiplyInstruction(u_int splitWord[]){
-    u_int negate = splitWord[5] & 0x1;
     u_int sf = splitWord[0];
 
     u_int64_t rn = readRegister(sf, splitWord[8]);
@@ -644,12 +643,16 @@ int fDECycle(void){
                     word >> 31,
                     ((1 << 30) & word) >> 30,
                     ((1 << 29) & word) >> 29,
-                    ((((2 << 5) - 1) << 25) & word) >> 25,
+                    ((((2 << 4) - 1) << 25) & word) >> 25,
                     ((1 << 24) & word) >> 24,
-                    ((((2 << 19) - 1) << 5) & word) >> 5,
+                    ((((2 << 18) - 1) << 5) & word) >> 5,
                     31 & word
             };
-            assert(splitInstruction[3] == 12);
+            for (int i = 0; i <= 6; i ++ ){
+                printf("splitInstruction at %d is: %d\n", i, splitInstruction[i]);
+            }
+            printf("hello");
+//            assert(splitInstruction[3] == 12);
 
             if ((splitInstruction[0] && splitInstruction[2]) == 1) {
                 loadLiteralInstruction(splitInstruction);
@@ -667,7 +670,7 @@ int fDECycle(void){
         }
             // No matching group so throw error code 8
         else {
-            printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
+            printf("decode failed on non-matching op0 value: %u, with word value: %u\n", op0 , word);
             return 8;
         }
     }
