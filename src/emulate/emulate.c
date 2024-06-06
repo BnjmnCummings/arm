@@ -82,6 +82,33 @@ bool arithmeticShiftInstruction(u_int splitWord[]){
 // It returns true on a successful execution, false otherwise
 bool logicalShiftInstruction(u_int splitWord[]){
     //TODO(Implement handling of a logical shift instruction, Note you will need to further split input)
+    u_int opc = splitWord[1];
+    u_int shift = (splitWord[5] >> 2) & 0x3;
+    u_int nVal = splitWord[5] & 0x1;
+    u_int sf = splitWord[0]
+    u_int firstOp = splitWord[7]
+    u_int rn;
+    u_int rm;
+    u_int secOp;
+    if (sf) {
+        firstOp;
+    } else {
+
+    }
+    // lsl shift
+    if (shift == 0b00) {
+        secOp = rm << firstOp;
+    }
+        // lsr and asr shift
+    else if ((shift == 0b01) || (shift == 0b10)) {
+        secOp = rm >> firstOp;
+    }
+    else {
+        secOp =
+    }
+    if (opc == 0b00) {
+
+    }
     return true;
 }
 
@@ -395,7 +422,7 @@ int fDECycle(void){
 }
 
 int main(int argc, char **argv) {
-    
+
     setupCPU();
 
     // Read from the file
