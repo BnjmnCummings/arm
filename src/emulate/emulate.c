@@ -31,7 +31,7 @@ bool binaryFileLoader(char *fileName){
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
-        fprintf( stderr, "Can't read given file\n" );
+        fprintf( stderr, "Can't read given input file\n" );
         return false;
     }
 
@@ -88,7 +88,7 @@ u_int readMemory(long long memoryAddress){
 
 bool writeMemory(bool in64BitMode, long long memoryAddress, long long data) {
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    int byteSizeMask = ((0x1 << BYTESIZE) - 1);
+    int byteSizeMask = ((0b1 << BYTESIZE) - 1);
     for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
         CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
     }
@@ -238,9 +238,9 @@ bool singleDataTransferInstruction(u_int splitWord[]){
     // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
     u_int brokenDownOperand[] = {
             operand >> 18,
-            ((0x1 << 17) & operand) >> 17,
+            ((0b1 << 17) & operand) >> 17,
             ((((2 << 12) - 1) << 5) & operand) >> 5,
-            (0x11111) & operand
+            (0b11111) & operand
     };
     assert(brokenDownOperand[0] == 0);
     u_int targetRegister = splitWord[6];
@@ -268,15 +268,15 @@ bool singleDataTransferInstruction(u_int splitWord[]){
         u_int brokenDownOffset[] = {
                 operand >> 11,
                 ((((2 << 8) - 1) << 2) & offset) >> 2,
-                ((0x1 << 1) & operand) >> 1,
-                (0x1) & offset
+                ((0b1 << 1) & operand) >> 1,
+                (0b1) & offset
         };
         assert(brokenDownOffset[0] == brokenDownOffset[3]);
         // Register offset
         if (brokenDownOffset[0]) {
-            assert((0x1111 & brokenDownOffset[1]) == 6);
+            assert((0b1111 & brokenDownOffset[1]) == 6);
 
-            u_int xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
+            u_int xm = (((0b11111) << 4) & brokenDownOffset[1]) >> 4;
             assert((0 <= xm) && (xm <= 30));
             long long xmValue = readMemory(xm);
 
@@ -355,19 +355,19 @@ bool conditionalBranchConditionCheck(u_int conditionCode){
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
     switch (conditionCode) {
-        case (0x0000):
+        case (0b0000):
             return (currentPSTATE.Zero);
-        case (0x0001):
+        case (0b0001):
             return !(currentPSTATE.Zero);
-        case (0x1010):
+        case (0b1010):
             return negativeEqOverflow;
-        case (0x1011):
+        case (0b1011):
             return !negativeEqOverflow;
-        case (0x1100):
+        case (0b1100):
             return ((!currentPSTATE.Zero) && negativeEqOverflow);
-        case (0x1101):
+        case (0b1101):
             return !((!currentPSTATE.Zero) && negativeEqOverflow);
-        case (0x1110):
+        case (0b1110):
             return true;
         default: {
             fprintf(stderr, "In conditionalBranchConditionCheck undefined condition encoding given with value: %d", conditionCode);
@@ -612,40 +612,18 @@ int main(int argc, char **argv) {
         exit(2);
     }
 
-    //for file writer
-    // Initialize memory array for testing
-    for(int i = 0; i < 4; i++) {
-        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
+    if (argc > 2) {
+        FILE *file = fopen(argv[2], "r");
+
+        if (file == NULL) {
+            fprintf( stderr, "Can't read given output file\n" );
+            exit(11);
+        }
+        writeCPU(file, &CPU);
     }
-//    printNonZeroMemory();
-//    int arr[] = {1,2,3,4};
-//    printf("%x", combineLittleEndian(arr));
-    printCPU(&CPU);
+    else {
+        writeCPU(stdout, &CPU);
+    }
 
     return EXIT_SUCCESS;
 }
-
-/* TODO( complete all the below sections for the emulator)
- DONE: binary file loader - create a function that takes in a (binary)
- file location and reads it into memory
-
- write emulator loop:
-    UNTESTED: simulator of arm execution cycle - want to simulate the fetch and decode
-    of the FDE cycle so something like a:
-        DONE: struct for Z/P/S...
-        DONE: struct for the CPU initialised once as a global variable - the CPU
-        UNTESTED: function made to read the instruction indicated by the CPU state
-        UNTESTED: functions to decode different forms of instructions
-
-    SETUP: simulate execution of instructions - quite probably a set of functions
-    and a massive switch statement that looks at the current instruction and
-    just does the necessary operations on the CPU (global instance)
-
-    UNTESTED: terminate upon instruction with encoding 0x8a000000 - probably just an added
-    condition on the above part
-
-    IN PROGRESS: Upon termination, output the registers values, the PSTATE condition flags, and any non-zero memory to a .out file-
-    simply a long print statement -
-        function to output the correct formatting of CPU states
-        may need some helper functions to clear things up
- */

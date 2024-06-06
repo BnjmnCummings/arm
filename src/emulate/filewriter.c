@@ -24,7 +24,7 @@ static u_int combineLittleEndian(u_int *arr) {
     return total;
 }
 
-static void printPState(processor *CPU) {
+static void printPState(FILE *filePath, processor *CPU) {
 
     char pStateStr[] = "NZCV";
 
@@ -39,22 +39,22 @@ static void printPState(processor *CPU) {
         if (!stateList[i]) { pStateStr[i] = '-';}
     }
 
-    printf("PSTATE : %s\n", pStateStr);
+    fprintf(filePath, "PSTATE : %s\n", pStateStr);
 }
 
 //register Printer:
-static void printRegisters(processor *CPU) {
+static void printRegisters(FILE *filePath, processor *CPU) {
     //general purpose registers:
     for(int i = 0; i < NUMBERGENERALREGISTERS; i++) {
-        printf("X%0*d = %0*x\n", INDEXWIDTH, i, REGISTERWIDTH, CPU->generalPurpose[i]);
+        fprintf(filePath,"X%0*d = %0*x\n", INDEXWIDTH, i, REGISTERWIDTH, CPU->generalPurpose[i]);
     }
 
     //Program counter
-    printf("PC = %0*x\n", REGISTERWIDTH, CPU->PC);
+    fprintf(filePath,"PC = %0*x\n", REGISTERWIDTH, CPU->PC);
 
 }
 
-static void printNonZeroMemory(processor *CPU) {
+static void printNonZeroMemory(FILE *filePath, processor *CPU) {
 
     u_int *ip = CPU->memory;
 
@@ -62,33 +62,18 @@ static void printNonZeroMemory(processor *CPU) {
     while (*ip != NULL) {
         //print in format:
         //address: hex value
-        printf("%p: 0x%0*x\n", ip, MEMORYWIDTH, combineLittleEndian(ip));
+        fprintf(filePath,"%p: 0x%0*x\n", ip, MEMORYWIDTH, combineLittleEndian(ip));
         ip += 4;
     }
 }
 
-void printCPU(processor *CPU) {
+void writeCPU(FILE *filePath, processor *CPU) {
     //General Purpose and PC Registers
-    printf("Registers:\n");
-    printRegisters(CPU);
+    fprintf(filePath, "Registers:\n");
+    printRegisters(filePath, CPU);
     //P-STATE
-    printPState(CPU);
+    printPState(filePath, CPU);
     //Non-Zero Memory
-    printf("Non-Zero memory:\n");
-    printNonZeroMemory(CPU);
+    fprintf(filePath, "Non-Zero memory:\n");
+    printNonZeroMemory(filePath, CPU);
 }
-
-//int main() {
-//    pstate initialPstate = {false, true, false, false};
-//
-//    processor CPU = {.ZR = 0};
-//    CPU.PC = 0;
-//    CPU.PSTATE = initialPstate;
-//
-//    for(int i = 0; i < 4; i++) {
-//        CPU.memory[i] = i + 1; // Example initialization, adjust as needed
-//    }
-//
-//    printCPU(CPU);
-//    return 0;
-//}
