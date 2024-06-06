@@ -103,7 +103,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 }
 
 // unconditionalBranch is a function taking the split instruction (word) as argument
-// It completed the instruction on the CPU
+// It applies an offset to the current PC value
 // It returns true on a successful execution, false otherwise
 bool unconditionalBranch(const u_int splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
@@ -120,10 +120,21 @@ bool unconditionalBranch(const u_int splitWord[]){
 }
 
 // registerBranch is a function taking the split instruction (word) as argument
-// It completed the instruction on the CPU
+// TODO(This may need to be offsets the PC instead of changes)
+// It changes the PC to a value specified in a specified register
 // It returns true on a successful execution, false otherwise
 bool registerBranch(u_int splitWord[]){
-    //TODO(Implement handling of a register branch instruction, Note you will need to further split input)
+    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
+    // Note this may need sign extended to 64 bit manually
+    int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
+
+    // find the new PC value and check validity
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    int newPCAddressLocation = CPU.generalPurpose[registerNumb];
+    assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
+
+    // update the PC value and return true
+    CPU.PC = newPCAddressLocation;
     return true;
 }
 
