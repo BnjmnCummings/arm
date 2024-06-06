@@ -36,7 +36,7 @@ bool binaryFileLoader(char *fileName){
     }
 
     int currentMemoryAddress = 0;
-    u_int ch;
+    u_int32_t ch;
     while( (ch = getc(file)) != EOF ) {
         CPU.memory[currentMemoryAddress] = ch;
         currentMemoryAddress ++;
@@ -46,13 +46,13 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
-int read32BitModeRegister(u_int registerNumb) {
+u_int32_t read32BitModeRegister(u_int32_t registerNumb) {
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    long long bitMask32 = ((long long) 1 << 32) - 1;
-    return (int) (CPU.generalPurpose[registerNumb] & bitMask32);
+    u_int64_t bitMask32 = ((u_int64_t) 1 << 32) - 1;
+    return (u_int32_t) (CPU.generalPurpose[registerNumb] & bitMask32);
 }
 
-long long readRegister(bool in64BitMode, u_int registerNumb){
+u_int64_t readRegister(bool in64BitMode, u_int32_t registerNumb){
     assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
         return CPU.generalPurpose[registerNumb];
@@ -60,14 +60,14 @@ long long readRegister(bool in64BitMode, u_int registerNumb){
     return read32BitModeRegister(registerNumb);
 }
 
-bool write32BitModeRegister(u_int registerNumb, long long data) {
+bool write32BitModeRegister(u_int32_t registerNumb, u_int64_t data) {
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    long long bitMask32 = (((long long) 1) << 32) - 1;
+    u_int64_t bitMask32 = (((u_int64_t) 1) << 32) - 1;
     CPU.generalPurpose[registerNumb] = data & bitMask32;
     return true;
 }
 
-bool writeRegister(bool in64BitMode, u_int registerNumb, long long data){
+bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
     assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
         CPU.generalPurpose[registerNumb] = data;
@@ -77,18 +77,18 @@ bool writeRegister(bool in64BitMode, u_int registerNumb, long long data){
 }
 
 // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
-u_int readMemory(long long memoryAddress){
+u_int32_t readMemory(u_int64_t memoryAddress){
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    u_int word = CPU.memory[memoryAddress + 3] << (BYTESIZE * 3);
+    u_int32_t word = CPU.memory[memoryAddress + 3] << (BYTESIZE * 3);
     for (int i = 2; i >= 0; i--){
         word &= CPU.memory[memoryAddress + i] << (BYTESIZE * i);
     }
     return word;
 }
 
-bool writeMemory(bool in64BitMode, long long memoryAddress, long long data) {
+bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data) {
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    int byteSizeMask = ((0x1 << BYTESIZE) - 1);
+    u_int32_t byteSizeMask = ((0x1 << BYTESIZE) - 1);
     for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
         CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
     }
@@ -98,8 +98,8 @@ bool writeMemory(bool in64BitMode, long long memoryAddress, long long data) {
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-bool arithmeticInstruction(u_int splitWord[]){
-    u_int operand[] = {
+bool arithmeticInstruction(u_int32_t splitWord[]){
+    u_int32_t operand[] = {
         splitWord[4] << 17,
         ((((1 << 11) - 1) << 5) & splitWord[4]) >> 5,
         splitWord[4] & 0b11111
@@ -152,8 +152,8 @@ bool arithmeticInstruction(u_int splitWord[]){
 // wideMoveInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-bool wideMoveInstruction(u_int splitWord[]){
-    u_int operand[] = {
+bool wideMoveInstruction(u_int32_t splitWord[]){
+    u_int32_t operand[] = {
         splitWord[4] << 16,
         splitWord[4] & ((1 << 15) - 1)
     };
@@ -209,13 +209,13 @@ bool logicalShiftInstruction(u_int splitWord[]){
 // loadLiteralInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-bool loadLiteralInstruction(u_int splitWord[]){
+bool loadLiteralInstruction(u_int32_t splitWord[]){
     // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
     // Note this may need sign extended to 64 bit manually
     int offset = splitWord[5] * 4;
 
     // find the target and source locations and check validity
-    u_int targetRegister = splitWord[6];
+    u_int32_t targetRegister = splitWord[6];
     assert((0 <= targetRegister) && (targetRegister <= 30));
     int loadFromAddress = CPU.PC + offset;
     assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
@@ -228,44 +228,44 @@ bool loadLiteralInstruction(u_int splitWord[]){
 // singleDataTransferInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-bool singleDataTransferInstruction(u_int splitWord[]){
+bool singleDataTransferInstruction(const u_int32_t splitWord[]){
     //TODO(lots of casts here uint to int especially when reading xm ,xn. These def need a check)
 
     // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
-    u_int operand = splitWord[5];
+    u_int32_t operand = splitWord[5];
     bool registerMode = splitWord[1];
 
     // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
-    u_int brokenDownOperand[] = {
+    u_int32_t brokenDownOperand[] = {
             operand >> 18,
             ((0x1 << 17) & operand) >> 17,
             ((((2 << 12) - 1) << 5) & operand) >> 5,
             (0x11111) & operand
     };
     assert(brokenDownOperand[0] == 0);
-    u_int targetRegister = splitWord[6];
+    u_int32_t targetRegister = splitWord[6];
     assert((0 <= targetRegister) && (targetRegister <= 30));
-    u_int xn = brokenDownOperand[3];
+    u_int32_t xn = brokenDownOperand[3];
     assert((0 <= xn) && (xn <= 30));
-    long long xnValue = readRegister(registerMode, xn);
+    u_int64_t xnValue = readRegister(registerMode, xn);
 
     // U == 1 then unsigned immediate offset
     if (splitWord[4]) {
-        u_int offset = brokenDownOperand[2] * 4;
+        u_int32_t offset = brokenDownOperand[2] * 4;
         // 64 bit mode
         if (splitWord[1]) {
             offset *= 2;
         }
         // 32 bit mode requires no change
 
-        long long loadFromAddress = xnValue + offset;
+        u_int64_t loadFromAddress = xnValue + offset;
         assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
         writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
     }
     else {
-        u_int offset = brokenDownOperand[2];
+        u_int32_t offset = brokenDownOperand[2];
         // broken down into: bit (1 bit), simm9? (9 bit), I (1 bit), bit (1 bit)
-        u_int brokenDownOffset[] = {
+        u_int32_t brokenDownOffset[] = {
                 operand >> 11,
                 ((((2 << 8) - 1) << 2) & offset) >> 2,
                 ((0x1 << 1) & operand) >> 1,
@@ -276,11 +276,11 @@ bool singleDataTransferInstruction(u_int splitWord[]){
         if (brokenDownOffset[0]) {
             assert((0x1111 & brokenDownOffset[1]) == 6);
 
-            u_int xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
+            u_int32_t xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
             assert((0 <= xm) && (xm <= 30));
-            long long xmValue = readMemory(xm);
+            u_int64_t xmValue = readMemory(xm);
 
-            long long loadFromAddress = xmValue + xnValue;
+            u_int64_t loadFromAddress = xmValue + xnValue;
             assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
             writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
         }
@@ -291,7 +291,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
             if (brokenDownOffset[2]) {
                 assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
                 assert((-256 <= simm9) && (simm9 <= 255));
-                long long readWriteValue = xnValue + simm9;
+                u_int64_t readWriteValue = xnValue + simm9;
 
                 writeRegister(registerMode, targetRegister, readMemory(readWriteValue));
                 writeMemory(registerMode, xnValue, readWriteValue);
@@ -302,7 +302,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
                 writeRegister(registerMode, targetRegister, readMemory(xnValue));
 
                 assert((-256 <= simm9) && (simm9 <= 255));
-                long long newValue = xnValue + simm9;
+                u_int64_t newValue = xnValue + simm9;
 
                 writeMemory(registerMode, xnValue, newValue);
             }
@@ -315,7 +315,7 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 // unconditionalBranch is a function taking the split instruction (word) as argument
 // It applies an offset to the current PC value
 // It returns true on a successful execution, false otherwise
-bool unconditionalBranch(const u_int splitWord[]){
+bool unconditionalBranch(const u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
     int offset = splitWord[3] * 4;
@@ -332,14 +332,14 @@ bool unconditionalBranch(const u_int splitWord[]){
 // registerBranch is a function taking the split instruction (word) as argument
 // It changes the PC to a value specified in a specified register
 // It returns true on a successful execution, false otherwise
-bool registerBranch(u_int splitWord[]){
+bool registerBranch(u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
-    u_int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
+    u_int32_t registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    int newPCAddressLocation = readMemory(registerNumb);
+    u_int32_t newPCAddressLocation = readMemory(registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -350,7 +350,7 @@ bool registerBranch(u_int splitWord[]){
 // conditionalBranchConditionCheck is a function taking the condition on the branch as argument
 // It checks if the encoded condition is true for the current PSTATE
 // It returns whether the condition is true or not
-bool conditionalBranchConditionCheck(u_int conditionCode){
+bool conditionalBranchConditionCheck(u_int32_t conditionCode){
     pstate currentPSTATE = CPU.PSTATE;
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
@@ -379,12 +379,12 @@ bool conditionalBranchConditionCheck(u_int conditionCode){
 // conditionalBranch is a function taking the split instruction (word) as argument
 // It checks an encoded condition and if true, it applies an indicated offset to the PC
 // It returns true on a successful execution, false otherwise
-bool conditionalBranch(u_int splitWord[]){
+bool conditionalBranch(u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
-    u_int operand = splitWord[3];
+    u_int32_t operand = splitWord[3];
 
     // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
-    u_int brokenDownOperand[] = {
+    u_int32_t brokenDownOperand[] = {
             operand >> 24,
             ((((2 << 19) - 1) << 5) & operand) >> 5, // simm19
             ((1 << 4) & operand) >> 4,
@@ -432,7 +432,7 @@ int fDECycle(void){
         }
 
         // read word in little endian
-        u_int word = readMemory(pcValue);
+        u_int32_t word = readMemory(pcValue);
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
@@ -440,14 +440,14 @@ int fDECycle(void){
         }
 
         // Decode:
-        u_int op0 = ((0b1111 << 24) & word) >> 24;
+        u_int32_t op0 = ((0b1111 << 24) & word) >> 24;
 
         // 101x -> Branch group
         if ((op0 & 0b1110) == 0b1100) {
             // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
             // unsure if changing this to int is correct vs uint
-            u_int splitInstruction[] = {
+            u_int32_t splitInstruction[] = {
                     word >> 31,
                     ((1 << 30) & word) >> 30,
                     ((15 << 26) & word) >> 26,
@@ -476,7 +476,7 @@ int fDECycle(void){
         else if ((op0 & 0b1110) == 0b1000) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
-            u_int splitInstruction[] = {
+            u_int32_t splitInstruction[] = {
                     word >> 31,
                     ((0b11 << 29) & word) >> 29,
                     ((0b111 << 26) & word) >> 26,
@@ -512,7 +512,7 @@ int fDECycle(void){
         else if ((op0 & 7) == 5) {
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
-            u_int splitInstruction[] = {
+            u_int32_t splitInstruction[] = {
                     word >> 31,
                     ((3 << 29) & word) >> 29,
                     ((1<<28) & word) >> 28,
@@ -557,7 +557,7 @@ int fDECycle(void){
         else if ((op0 & 5) == 4) {
             // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
-            u_int splitInstruction[] = {
+            u_int32_t splitInstruction[] = {
                     word >> 31,
                     ((1 << 30) & word) >> 30,
                     ((1 << 29) & word) >> 29,
