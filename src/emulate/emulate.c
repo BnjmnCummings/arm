@@ -497,9 +497,7 @@ bool conditionalBranch(u_int32_t splitWord[]){
 // It simulates the FDE cycle using other helper functions for each instruction
 // It returns 0 on a successful run or an error code (0 < num < 8) on a fail with a relevant message
 int fDECycle(void){
-    bool halt = false;
-    while (!halt){
-
+    while (true){
         // Fetch
         int pcValue = CPU.PC;
 
@@ -672,9 +670,6 @@ int fDECycle(void){
             printf("decode failed on non-matching op0 value: %d, with word value: %d\n", op0 , word);
             return 8;
         }
-
-        // Temp ending insurance TODO(remove when termination tested)
-        halt = true;
     }
     return 0;
 }
