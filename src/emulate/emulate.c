@@ -45,6 +45,55 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
+int read32BitModeRegister(u_int registerNumb) {
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    long long bitMask32 = ((long long) 1 << 32) - 1;
+    return (int) (CPU.generalPurpose[registerNumb] & bitMask32);
+}
+
+long long readRegister(bool in64BitMode, u_int registerNumb){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    if (in64BitMode) {
+        return CPU.generalPurpose[registerNumb];
+    }
+    return read32BitModeRegister(registerNumb);
+}
+
+bool write32BitModeRegister(u_int registerNumb, long long data) {
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    long long bitMask32 = (((long long) 1) << 32) - 1;
+    CPU.generalPurpose[registerNumb] = data & bitMask32;
+    return true;
+}
+
+bool writeRegister(bool in64BitMode, u_int registerNumb, long long data){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    if (in64BitMode) {
+        CPU.generalPurpose[registerNumb] = data;
+        return true;
+    }
+    return write32BitModeRegister(registerNumb, data);
+}
+
+// read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
+u_int readMemory(long long memoryAddress){
+    assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
+    u_int word = CPU.memory[memoryAddress + 3] << (BYTESIZE * 3);
+    for (int i = 2; i >= 0; i--){
+        word &= CPU.memory[memoryAddress + i] << (BYTESIZE * i);
+    }
+    return word;
+}
+
+bool writeMemory(long long memoryAddress, int data) {
+    assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
+    int byteSizeMask = ((0x1 << BYTESIZE) - 1);
+    for (int i = 0; i < 4; i ++){
+        CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
+    }
+    return true;
+}
+
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
@@ -319,11 +368,8 @@ int fDECycle(void){
             return 3;
         }
 
-        // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
-        u_int word = CPU.memory[pcValue + 3] << (BYTESIZE * 3);
-        for (int i = 2; i >= 0; i--){
-            word &= CPU.memory[pcValue + i] << (BYTESIZE * i);
-        }
+        // read word in little endian
+        u_int word = readMemory(pcValue);
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
