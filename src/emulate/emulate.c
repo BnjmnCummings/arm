@@ -6,6 +6,7 @@
 #include "processor.h"
 
 #define BYTESIZE 8
+//TODO(IMPLEMENT MACRO FOR INCREMENT PC AND DEFINE WORDSIZE)
 
 // TODO(figure out correct initialisation)
 pstate initialPstate = {false, true, false, false};
@@ -104,8 +105,17 @@ bool singleDataTransferInstruction(u_int splitWord[]){
 // unconditionalBranch is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-bool unconditionalBranch(u_int splitWord[]){
-    //TODO(Implement handling of an unconditional branch instruction, Note you will need to further split input)
+bool unconditionalBranch(const u_int splitWord[]){
+    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
+    // Note this may need sign extended to 64 bit manually
+    int offset = splitWord[3] * 4;
+
+    // find the new PC value and check validity
+    int newPCAddressLocation = CPU.PC + offset;
+    assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
+
+    // update the PC value and return true
+    CPU.PC = CPU.memory[CPU.PC + offset];
     return true;
 }
 
@@ -127,7 +137,7 @@ bool conditionalBranch(u_int splitWord[]){
 
 // fDECycle is a function that takes no inputs
 // It simulates the FDE cycle using other helper functions for each instruction
-// It returns 0 on a successfull run or an error code (0 < num < 8) on a fail with a relevent message
+// It returns 0 on a successful run or an error code (0 < num < 8) on a fail with a relevant message
 int fDECycle(void){
     bool halt = false;
     while (!halt){
@@ -148,10 +158,10 @@ int fDECycle(void){
             return 3;
         }
 
-        // read word in little endian
-        u_int word = CPU.memory[pcValue + 3];
-        for (int i = 1; i < 4; i++){
-            word &= CPU.memory[pcValue + 3 - i] << (BYTESIZE * i);
+        // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
+        u_int word = CPU.memory[pcValue + 3] << (BYTESIZE * 3);
+        for (int i = 2; i >= 0; i--){
+            word &= CPU.memory[pcValue + i] << (BYTESIZE * i);
         }
 
         // check if the instruction is a halt (Untested)
@@ -160,18 +170,17 @@ int fDECycle(void){
         }
 
         // Decode:
-        //TODO(Add check for termination input)
         u_int op0 = ((15 << 24) & word) >> 24;
+
         // 101x -> Branch group
         if ((op0 & 14) == 10) {
-            // Decode to: sf, bit, op0+, 'operand'
+            // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
+            // unsure if changing this to int is correct vs uint
             u_int splitInstruction[] = {
                     word >> 31,
                     ((1 << 30) & word) >> 30,
                     ((15 << 26) & word) >> 26,
-                    ((7 << 23) & word) >> 23,
-                    ((((2 << 19) - 1) << 5) & word) >> 5,
                     ((2 << 26) - 1) & word
             };
             assert(splitInstruction[2] == 5);
@@ -190,6 +199,8 @@ int fDECycle(void){
                 printf("No branch instruction matching bit 31 and bit 30 values: %d, %d\n", splitInstruction[0], splitInstruction[1]);
                 return 4;
             }
+
+            // No PC increment as these instructions are all branches
         }
             // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
@@ -224,6 +235,8 @@ int fDECycle(void){
                     return 5;
                 }
             }
+            // TODO(Replace with macro "increment PC" when in separate file)
+            CPU.PC += 4;
         }
             // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
@@ -267,6 +280,8 @@ int fDECycle(void){
                 printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
                 return 6;
             }
+            // TODO(Replace with macro "increment PC" when in separate file)
+            CPU.PC += 4;
         }
             // x1x0 -> Loads and stores group
         else if ((op0 & 5) == 4) {
@@ -294,6 +309,8 @@ int fDECycle(void){
                 printf("No load or store instruction matching bit 31, 29 and U values: %d, %d, %d\n", splitInstruction[0], splitInstruction[2], splitInstruction[4]);
                 return 7;
             }
+            // TODO(Replace with macro "increment PC" when in separate file)
+            CPU.PC += 4;
         }
             // No matching group so throw error code 8
         else {
