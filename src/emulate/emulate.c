@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <stdint.h>
 #include "filewriter.h"
 #include "processor.h"
 
@@ -49,7 +50,60 @@ bool binaryFileLoader(char *fileName){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticInstruction(u_int splitWord[]){
-    //TODO(Implement handling of arithmetic instruction, Note you will need to further split input)
+    u_int operand[] = {
+        splitWord[4] << 17,
+        ((((1 << 12) - 1) << 5) & splitWord[4]) >> 5,
+        splitWord[4] & 0b11111
+    };
+    int op2 = operand[1];
+    if (operand[0] == 1) {
+        op2 = op2 << 12;
+    }
+    int rn;
+    if (splitWord[0] == 0) {
+        rn = read32BitModeRegister(operand[2]);
+    } else {
+        rn = read64BitModeRegister(operand[2]);
+    }
+
+    int result;
+    switch (splitWord[1])
+    {
+    //add
+    case (0b00):
+        result = rn + op2;
+        break;
+    //adds
+    case (0b01):
+        result = rn + op2;
+        CPU.PSTATE.Negative = result < 0;
+        CPU.PSTATE.Zero = result == 0;
+        CPU.PSTATE.Carry = 0; //TODO - check for carry
+        CPU.PSTATE.Overflow = 0; //TODO - check for overflow
+        break;
+    //sub
+    case (0b10):
+        result = rn - op2;
+        break;
+    //subs
+    case (0b11):
+        result = rn - op2;
+        CPU.PSTATE.Negative = result < 0;
+        CPU.PSTATE.Zero = result == 0;
+        CPU.PSTATE.Carry = 0; //TODO - check for carry
+        CPU.PSTATE.Overflow = 0; //TODO - check for overflow
+        break;
+    default:
+        break;
+    }
+
+    // write to Rd
+    if (splitWord[0] == 0) {
+        write32BitModeRegister(splitWord[5], result);
+    } else {
+        write64BitModeRegister(splitWord[5], result);
+    }
+    
     return true;
 }
 
@@ -57,7 +111,34 @@ bool arithmeticInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool wideMoveInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a wide move instruction, Note you will need to further split input)
+        u_int operand[] = {
+        splitWord[4] << 16,
+        splitWord[4] & ((1 << 16) - 1)
+    };
+    int op = operand[1] << (operand[0] * 16);
+    int result;
+    switch (splitWord[1])
+    {
+    //movk
+    case (0b00):
+        result = ~op;
+        break;
+    //movz
+    case (0b10):
+        result = op;
+        break;
+    //movk
+    case (0b11):
+        //TODO(implement movk)
+        break;
+    default:
+        break;
+    }
+    if (splitWord[0] == 0) {
+        write32BitModeRegister(splitWord[5], result);
+    } else {
+        write64BitModeRegister(splitWord[5], result);
+    }
     return true;
 }
 
@@ -229,7 +310,7 @@ int fDECycle(void){
         }
 
         // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
-        u_int word = CPU.memory[pcValue + 3] << (BYTESIZE * 3);
+        __u_int word = CPU.memory[pcValue + 3] << (BYTESIZE * 3);
         for (int i = 2; i >= 0; i--){
             word &= CPU.memory[pcValue + i] << (BYTESIZE * i);
         }
@@ -240,10 +321,10 @@ int fDECycle(void){
         }
 
         // Decode:
-        u_int op0 = ((15 << 24) & word) >> 24;
+        u_int op0 = ((0b1111 << 24) & word) >> 24;
 
         // 101x -> Branch group
-        if ((op0 & 14) == 10) {
+        if ((op0 & 0b1110) == 0b1100) {
             // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
             // unsure if changing this to int is correct vs uint
@@ -273,23 +354,23 @@ int fDECycle(void){
             // No PC increment as these instructions are all branches
         }
             // 100x -> Data processing (immediate) group
-        else if ((op0 & 14) == 8) {
+        else if ((op0 & 0b1110) == 0b1000) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
             u_int splitInstruction[] = {
                     word >> 31,
-                    ((3 << 29) & word) >> 29,
-                    ((7 << 26) & word) >> 26,
-                    ((7 << 23) & word) >> 23,
+                    ((0b11 << 29) & word) >> 29,
+                    ((0b111 << 26) & word) >> 26,
+                    ((0b111 << 23) & word) >> 23,
                     ((((2 << 19) - 1) << 5) & word) >> 5,
-                    31 & word
+                    0b1111 & word
             };
             assert(splitInstruction[2] == 4);
 
             //Switch on opi
             switch (splitInstruction[3]){
                 // opi is 010, then the instruction is an arithmetic instruction
-                case (2): {
+                case (0b010): {
                     arithmeticInstruction(splitInstruction);
                     break;
                 }
