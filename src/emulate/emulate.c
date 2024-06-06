@@ -120,7 +120,6 @@ bool unconditionalBranch(const u_int splitWord[]){
 }
 
 // registerBranch is a function taking the split instruction (word) as argument
-// TODO(This may need to be offsets the PC instead of changes)
 // It changes the PC to a value specified in a specified register
 // It returns true on a successful execution, false otherwise
 bool registerBranch(u_int splitWord[]){
@@ -138,11 +137,71 @@ bool registerBranch(u_int splitWord[]){
     return true;
 }
 
+// conditionalBranchConditionCheck is a function taking the condition on the branch as argument
+// It checks if the encoded condition is true for the current PSTATE
+// It returns whether the condition is true or not
+bool conditionalBranchConditionCheck(u_int conditionCode){
+    pstate currentPSTATE = CPU.PSTATE;
+    bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
+
+    switch (conditionCode) {
+        case (0x0000): {
+            return (currentPSTATE.Zero);
+        }
+        case (0x0001): {
+            return !(currentPSTATE.Zero);
+        }
+        case (0x1010): {
+            return negativeEqOverflow;
+        }
+        case (0x1011): {
+            return !negativeEqOverflow;
+        }
+        case (0x1100): {
+            return ((!currentPSTATE.Zero) && negativeEqOverflow);
+        }
+        case (0x1101): {
+            return !((!currentPSTATE.Zero) && negativeEqOverflow);
+        }
+        case (0x1110): {
+            return true;
+        }
+        default: {
+            fprintf(stderr, "In conditionalBranchConditionCheck undefined condition encoding given with value: %d", conditionCode);
+            exit(10);
+        }
+    }
+}
+
 // conditionalBranch is a function taking the split instruction (word) as argument
-// It completed the instruction on the CPU
+// It checks an encoded condition and if true, it applies an indicated offset to the PC
 // It returns true on a successful execution, false otherwise
 bool conditionalBranch(u_int splitWord[]){
-    //TODO(Implement handling of a conditional branch instruction, Note you will need to further split input)
+    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
+    u_int operand = splitWord[3];
+
+    // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
+    u_int brokenDownOperand[] = {
+            ((3 << 24) & operand) >> 24,
+            ((((2 << 19) - 1) << 5) & operand) >> 5, // simm19
+            1 << 4 & operand,
+            (16 - 1) & operand // condition encoding
+    };
+    assert(brokenDownOperand[0] == 0 && brokenDownOperand[2] == 0);
+
+    if (conditionalBranchConditionCheck(brokenDownOperand[3])){
+
+        // Note this may need sign extended to 64 bit manually
+        int offset = brokenDownOperand[1] * 4;
+
+        // find the new PC value and check validity
+        int newPCAddressLocation = CPU.PC + offset;
+        assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
+
+        // update the PC value
+        CPU.PC = CPU.memory[CPU.PC + offset];
+    }
+    // successful execution no matter the state of condition so return true
     return true;
 }
 
