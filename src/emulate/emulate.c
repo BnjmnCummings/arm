@@ -45,6 +45,55 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
+int read32BitModeRegister(u_int registerNumb) {
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    long long bitMask32 = ((long long) 1 << 32) - 1;
+    return (int) (CPU.generalPurpose[registerNumb] & bitMask32);
+}
+
+long long readRegister(bool in64BitMode, u_int registerNumb){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    if (in64BitMode) {
+        return CPU.generalPurpose[registerNumb];
+    }
+    return read32BitModeRegister(registerNumb);
+}
+
+bool write32BitModeRegister(u_int registerNumb, long long data) {
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    long long bitMask32 = (((long long) 1) << 32) - 1;
+    CPU.generalPurpose[registerNumb] = data & bitMask32;
+    return true;
+}
+
+bool writeRegister(bool in64BitMode, u_int registerNumb, long long data){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
+    if (in64BitMode) {
+        CPU.generalPurpose[registerNumb] = data;
+        return true;
+    }
+    return write32BitModeRegister(registerNumb, data);
+}
+
+// read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
+u_int readMemory(long long memoryAddress){
+    assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
+    u_int word = CPU.memory[memoryAddress + 3] << (BYTESIZE * 3);
+    for (int i = 2; i >= 0; i--){
+        word &= CPU.memory[memoryAddress + i] << (BYTESIZE * i);
+    }
+    return word;
+}
+
+bool writeMemory(bool in64BitMode, long long memoryAddress, long long data) {
+    assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
+    int byteSizeMask = ((0x1 << BYTESIZE) - 1);
+    for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
+        CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
+    }
+    return true;
+}
+
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
@@ -89,16 +138,105 @@ bool logicalShiftInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool loadLiteralInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a load literal instruction, Note you will need to further split input)
+    // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+    // Note this may need sign extended to 64 bit manually
+    int offset = splitWord[5] * 4;
+
+    // find the target and source locations and check validity
+    u_int targetRegister = splitWord[6];
+    assert((0 <= targetRegister) && (targetRegister <= 30));
+    int loadFromAddress = CPU.PC + offset;
+    assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+
+    // load the value into the target register and return true
+    writeRegister(splitWord[1], targetRegister, readMemory(loadFromAddress));
     return true;
 }
+
 // singleDataTransferInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool singleDataTransferInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a single data transfer instruction, Note you will need to further split input)
-    // Advise that this checks the offset and then calls the respective function
-    // Make these funcitons yourself so you can set them up how you want
+    //TODO(lots of casts here uint to int especially when reading xm ,xn. These def need a check)
+
+    // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+    u_int operand = splitWord[5];
+    bool registerMode = splitWord[1];
+
+    // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
+    u_int brokenDownOperand[] = {
+            operand >> 18,
+            ((0x1 << 17) & operand) >> 17,
+            ((((2 << 12) - 1) << 5) & operand) >> 5,
+            (0x11111) & operand
+    };
+    assert(brokenDownOperand[0] == 0);
+    u_int targetRegister = splitWord[6];
+    assert((0 <= targetRegister) && (targetRegister <= 30));
+    u_int xn = brokenDownOperand[3];
+    assert((0 <= xn) && (xn <= 30));
+    long long xnValue = readRegister(registerMode, xn);
+
+    // U == 1 then unsigned immediate offset
+    if (splitWord[4]) {
+        u_int offset = brokenDownOperand[2] * 4;
+        // 64 bit mode
+        if (splitWord[1]) {
+            offset *= 2;
+        }
+        // 32 bit mode requires no change
+
+        long long loadFromAddress = xnValue + offset;
+        assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+        writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
+    }
+    else {
+        u_int offset = brokenDownOperand[2];
+        // broken down into: bit (1 bit), simm9? (9 bit), I (1 bit), bit (1 bit)
+        u_int brokenDownOffset[] = {
+                operand >> 11,
+                ((((2 << 8) - 1) << 2) & offset) >> 2,
+                ((0x1 << 1) & operand) >> 1,
+                (0x1) & offset
+        };
+        assert(brokenDownOffset[0] == brokenDownOffset[3]);
+        // Register offset
+        if (brokenDownOffset[0]) {
+            assert((0x1111 & brokenDownOffset[1]) == 6);
+
+            u_int xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
+            assert((0 <= xm) && (xm <= 30));
+            long long xmValue = readMemory(xm);
+
+            long long loadFromAddress = xmValue + xnValue;
+            assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+            writeRegister(registerMode, targetRegister, readMemory(loadFromAddress));
+        }
+        // must be pre/post indexing
+        else {
+            int simm9 = brokenDownOffset[1];
+            // I == 1 so pre indexed
+            if (brokenDownOffset[2]) {
+                assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
+                assert((-256 <= simm9) && (simm9 <= 255));
+                long long readWriteValue = xnValue + simm9;
+
+                writeRegister(registerMode, targetRegister, readMemory(readWriteValue));
+                writeMemory(registerMode, xnValue, readWriteValue);
+            }
+                // I must be 0 so post indexed
+            else {
+                assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
+                writeRegister(registerMode, targetRegister, readMemory(xnValue));
+
+                assert((-256 <= simm9) && (simm9 <= 255));
+                long long newValue = xnValue + simm9;
+
+                writeMemory(registerMode, xnValue, newValue);
+            }
+        }
+        // in this situation a pattern must be matched so error message needed for nothing matching
+    }
     return true;
 }
 
@@ -115,7 +253,7 @@ bool unconditionalBranch(const u_int splitWord[]){
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
-    CPU.PC = CPU.memory[CPU.PC + offset];
+    CPU.PC = readMemory(CPU.PC + offset);
     return true;
 }
 
@@ -125,11 +263,11 @@ bool unconditionalBranch(const u_int splitWord[]){
 bool registerBranch(u_int splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
-    int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
+    u_int registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    int newPCAddressLocation = CPU.generalPurpose[registerNumb];
+    int newPCAddressLocation = readMemory(registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -145,27 +283,20 @@ bool conditionalBranchConditionCheck(u_int conditionCode){
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
     switch (conditionCode) {
-        case (0x0000): {
+        case (0x0000):
             return (currentPSTATE.Zero);
-        }
-        case (0x0001): {
+        case (0x0001):
             return !(currentPSTATE.Zero);
-        }
-        case (0x1010): {
+        case (0x1010):
             return negativeEqOverflow;
-        }
-        case (0x1011): {
+        case (0x1011):
             return !negativeEqOverflow;
-        }
-        case (0x1100): {
+        case (0x1100):
             return ((!currentPSTATE.Zero) && negativeEqOverflow);
-        }
-        case (0x1101): {
+        case (0x1101):
             return !((!currentPSTATE.Zero) && negativeEqOverflow);
-        }
-        case (0x1110): {
+        case (0x1110):
             return true;
-        }
         default: {
             fprintf(stderr, "In conditionalBranchConditionCheck undefined condition encoding given with value: %d", conditionCode);
             exit(10);
@@ -182,9 +313,9 @@ bool conditionalBranch(u_int splitWord[]){
 
     // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
     u_int brokenDownOperand[] = {
-            ((3 << 24) & operand) >> 24,
+            operand >> 24,
             ((((2 << 19) - 1) << 5) & operand) >> 5, // simm19
-            1 << 4 & operand,
+            ((1 << 4) & operand) >> 4,
             (16 - 1) & operand // condition encoding
     };
     assert(brokenDownOperand[0] == 0 && brokenDownOperand[2] == 0);
@@ -199,7 +330,7 @@ bool conditionalBranch(u_int splitWord[]){
         assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
         // update the PC value
-        CPU.PC = CPU.memory[CPU.PC + offset];
+        CPU.PC = readMemory(CPU.PC + offset);
     }
     // successful execution no matter the state of condition so return true
     return true;
@@ -228,11 +359,8 @@ int fDECycle(void){
             return 3;
         }
 
-        // read word in little endian TODO(TEST THIS DOESNT NEED REVERSING)
-        u_int word = CPU.memory[pcValue + 3] << (BYTESIZE * 3);
-        for (int i = 2; i >= 0; i--){
-            word &= CPU.memory[pcValue + i] << (BYTESIZE * i);
-        }
+        // read word in little endian
+        u_int word = readMemory(pcValue);
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
@@ -272,7 +400,7 @@ int fDECycle(void){
 
             // No PC increment as these instructions are all branches
         }
-            // 100x -> Data processing (immediate) group
+        // 100x -> Data processing (immediate) group
         else if ((op0 & 14) == 8) {
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
@@ -308,7 +436,7 @@ int fDECycle(void){
             // TODO(Replace with macro "increment PC" when in separate file)
             CPU.PC += 4;
         }
-            // x101 -> Data processing (register) group
+        // x101 -> Data processing (register) group
         else if ((op0 & 7) == 5) {
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
@@ -353,9 +481,9 @@ int fDECycle(void){
             // TODO(Replace with macro "increment PC" when in separate file)
             CPU.PC += 4;
         }
-            // x1x0 -> Loads and stores group
+        // x1x0 -> Loads and stores group
         else if ((op0 & 5) == 4) {
-            // Decode to: bit, sf, bit, op0+, U, 'operand', rt
+            // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
             u_int splitInstruction[] = {
                     word >> 31,
