@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
     u_int memory[MEMORYSIZE];
-    int generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
+    long long generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const int ZR; // zero register
     int PC; // program counter
     // int SP; // stack pointer (Un-needed)

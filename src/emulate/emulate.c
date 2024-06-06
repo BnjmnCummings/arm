@@ -47,37 +47,31 @@ bool binaryFileLoader(char *fileName){
 
 int read32BitModeRegister(u_int registerNumb) {
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    //TODO(Implement this function, returning the relevent information)
-}
-
-long long read64BitModeRegister(u_int registerNumb) {
-    assert((0 <= registerNumb) && (registerNumb <= 30));
-    //TODO(Implement this function, returning the relevent information)
+    long long bitMask32 = ((long long) 1 << 32) - 1;
+    return (int) (CPU.generalPurpose[registerNumb] & bitMask32);
 }
 
 long long readRegister(bool in64BitMode, u_int registerNumb){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
-        return read64BitModeRegister( registerNumb);
+        return CPU.generalPurpose[registerNumb];
     }
-    // TODO(I use the inbuilt upcast from int to long long, this may not work)
     return read32BitModeRegister(registerNumb);
 }
 
-bool write32BitModeRegister(u_int registerNumb, int data) {
+bool write32BitModeRegister(u_int registerNumb, long long data) {
     assert((0 <= registerNumb) && (registerNumb <= 30));
-    //TODO(Implement this function, writing the relevent information)
-}
-
-bool write64BitModeRegister(u_int registerNumb, long long data) {
-    assert((0 <= registerNumb) && (registerNumb <= 30));
-    //TODO(Implement this function, writing the relevent information)
+    long long bitMask32 = (((long long) 1) << 32) - 1;
+    CPU.generalPurpose[registerNumb] = data & bitMask32;
+    return true;
 }
 
 bool writeRegister(bool in64BitMode, u_int registerNumb, long long data){
+    assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
-        return write64BitModeRegister( registerNumb, data);
+        CPU.generalPurpose[registerNumb] = data;
+        return true;
     }
-    // TODO(I use the inbuilt downcast from long long to int, this may not work)
     return write32BitModeRegister(registerNumb, data);
 }
 
