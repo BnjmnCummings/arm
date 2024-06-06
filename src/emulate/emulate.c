@@ -108,9 +108,88 @@ bool loadLiteralInstruction(u_int splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool singleDataTransferInstruction(u_int splitWord[]){
-    //TODO(Implement handling of a single data transfer instruction, Note you will need to further split input)
-    // Advise that this checks the offset and then calls the respective function
-    // Make these funcitons yourself so you can set them up how you want
+    //TODO(lots of casts here uint to int especially when reading xm ,xn. These def need a check)
+
+    // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+    u_int operand = splitWord[5];
+
+    // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
+    u_int brokenDownOperand[] = {
+            operand >> 18,
+            ((0x1 << 17) & operand) >> 17,
+            ((((2 << 12) - 1) << 5) & operand) >> 5,
+            (0x11111) & operand
+    };
+    assert(brokenDownOperand[0] == 0);
+    u_int targetRegister = splitWord[6];
+    assert((0 <= targetRegister) && (targetRegister <= 30));
+    u_int xn = brokenDownOperand[3];
+    assert((0 <= xn) && (xn <= 30));
+    long long xnValue = CPU.generalPurpose[xn];
+
+    // U == 1 then unsigned immediate offset
+    if (splitWord[4]) {
+        u_int offset = brokenDownOperand[2] * 4;
+        // 64 bit mode
+        if (splitWord[1]) {
+            offset *= 2;
+        }
+        // 32 bit mode requires no change
+
+        long long loadFromAddress = xnValue + offset;
+        assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+
+        CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
+    }
+    else {
+        u_int offset = brokenDownOperand[2];
+        // broken down into: bit (1 bit), simm9? (9 bit), I (1 bit), bit (1 bit)
+        u_int brokenDownOffset[] = {
+                operand >> 11,
+                ((((2 << 8) - 1) << 2) & offset) >> 2,
+                ((0x1 << 1) & operand) >> 1,
+                (0x1) & offset
+        };
+        assert(brokenDownOffset[0] == brokenDownOffset[3]);
+        // Register offset
+        if (brokenDownOffset[0]) {
+            assert((0x1111 & brokenDownOffset[1]) == 6);
+
+            u_int xm = (((0x11111) << 4) & brokenDownOffset[1]) >> 4;
+            assert((0 <= xm) && (xm <= 30));
+            long long xmValue = CPU.generalPurpose[xm];
+
+            long long loadFromAddress = xmValue + xnValue;
+            assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
+
+            CPU.generalPurpose[targetRegister] = CPU.memory[loadFromAddress];
+        }
+        // must be pre/post indexing
+        else {
+            int simm9 = brokenDownOffset[1];
+            // I == 1 so pre indexed
+            if (brokenDownOffset[2]) {
+                assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
+                assert((-256 <= simm9) && (simm9 <= 255));
+                long long readWriteValue = xnValue + simm9;
+
+                CPU.generalPurpose[targetRegister] = CPU.memory[readWriteValue];
+
+                CPU.memory[xnValue] = readWriteValue;
+            }
+                // I must be 0 so post indexed
+            else {
+                assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
+                CPU.generalPurpose[targetRegister] = CPU.memory[xnValue];
+
+                assert((-256 <= simm9) && (simm9 <= 255));
+                long long newValue = xnValue + simm9;
+
+                CPU.memory[xnValue] = newValue;
+            }
+        }
+        // in this situation a pattern must be matched so error message needed for nothing matching
+    }
     return true;
 }
 
@@ -194,9 +273,9 @@ bool conditionalBranch(u_int splitWord[]){
 
     // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
     u_int brokenDownOperand[] = {
-            ((3 << 24) & operand) >> 24,
+            operand >> 24,
             ((((2 << 19) - 1) << 5) & operand) >> 5, // simm19
-            1 << 4 & operand,
+            ((1 << 4) & operand) >> 4,
             (16 - 1) & operand // condition encoding
     };
     assert(brokenDownOperand[0] == 0 && brokenDownOperand[2] == 0);
