@@ -9,42 +9,16 @@
 
 \maketitle
 
-\section{TODO:}
-
-• A statement on how you have split the work between group members and how you are coordinating
-your work.
-\\• A discussion on how well you think the group is working and how you imagine it might need to
-change for the later tasks.
-\\• How you have structured your emulator, and what bits you think you will be able to reuse for the
-assembler.
-\\• A discussion on implementation tasks that you think you will find difficult / challenging later on,
-and how you are working to mitigate these.
-
 \section{Group Organisation}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
-
+Initially, after a careful discussion, Bruce and Freddie were tasked with fundamental research on C inter-workings to establish a better starting foundation, while Ben and Eli closely examined the specification and together outlined a plan for the emulator on the skeleton file. Due to being relatively new to version control with Git, we had a slow start to the project as along with a variety of personal circumstances, we encountered multiple obstacles with merging and branching. On separate occasions, miscommunication caused us to incorrectly push and pull, resulting in instances of entire segments of code being lost and needing to be rewritten. \newline \indent To mitigate the effects of decentralised work and communication issues, we have opted, in place of remote work, to focus on arranging in-person work sessions where at least most group members are present. This has allowed us to hold all group members accountable for their share of the work, and also to easily separate and outsource more work after moving further along in the project. Through working in labs, we have also realised a significant preference for performing tasks on lab machines rather than our own computers, which also contributed to the shift to in-person work. \newline \indent Following consecutive productive onsite planning meetings, we began implementing the code outlined by Eli and Ben. Ben managed the outputting and formatting of the results and the file writer/loader, and Eli completed the Fetch Decode Execute Cycle, as well as the simple branch and load instruction handlers. Bruce and Freddie were given the tasks of implementing the register and immediate data processing instruction handlers, respectively. This work was done in conjunction with measured, deliberate, and incremental testing. \newline \indent After completion of a first version of the entire code, methodical refactoring was done to inefficient bit shifting and masking measures in addition to other quality-of-life changes. Bruce and Freddie devised helper functions to aid with generalising code and readability, such as the masking method proposed by Eli. Debugging was then done as a group, with Freddie acting as the main operator for the test suite and code editor, while other team members aiding in finding mistakes. This report was written collaboratively as a group, but with the main recording led by Bruce.
+ 
 \section{Implementation Strategies}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+We strive to build a easily maintainable and clearly readable emulator. For this purpose we deployed the code into multiple files, ensuring the modularity of the entire project by dividing existing code into smaller standalone functions. We have split off the loading and writing, and we have plans to further break down the data processing into separate parts based on type to better readability. There are also a variety of helper functions we have implemented in preparation for processing assembler instructions but also simply for ease-of-access in our emulator code. \newline \indent Generalised functions allow us to undertake adaptive maintenance while not interfering with the overall code. Whilst we have yet to start on the assembler as we attempt to refine and perfect our emulator, we expect to reuse abstract shared data structures that allow us to enable two-way communication between the assembler and emulator. Read and write functions could be reused and abstracted as well to simplify assembler implementation and confirm validity of code, since it is shared from a working section in the emulator. We could also perhaps recycle or reuse portions or at least ideas from the instruction processing methods of our emulator within similar handling processes in the assembler. Moreover, many helper functions that we have mentioned earlier could possibly be employed to adapt and conduct the implementation of the assembler as well.
 
 \section{Future Directions and Challenges}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+While the group is currently working smoothly but assiduously, much akin to a well-oiled machine, there are challenges to reflect on but also to anticipate in the future. We recognise that while long and concentrated onsite programming sessions have been the key to success for us, interruptions may eventually occur that makes it difficult to organise such meetings regularly. So although we have found what mode of operation works best for us, we still must take a multifaceted approach when it comes to collaboration, and this entails improving remote communication and organisation. How this might be bettered is possibly through a shared document that tracks to-dos and work progress, and more forward-planned branching and merging on Git. \newline \indent Despite testing and refactoring being done consistently in recent installments of our emulator, we do note that our unfamiliarity with C and the workings of the test suite may have caused a lack of regular testing in the beginning of the project. To mitigate this in the future, the group members must gain familiarity with operating the tests and adding helpful comments that streamline debugging. \newline \indent We foresee that implementation of the assembler data processing algorithms may be challenging for us as we have required heavy time and resources to code and debug our work for the data processing portion of the emulator. Furthermore, we also expect the interplay between our emulator and assembler to be difficult to execute, but with better organisation and testing we should be able to mitigate these difficulties. Another helpful aspect would be the experience and understanding we have already gained through the insights provided to us by the first part of the project, as we now have a foundation of knowledge to build upon. We also acknowledge that many of our problems stem from a lack of comprehension of the impact of a myriad of operations we are encoding, so again, the intuition from churning through the emulator will help alleviate these issues.
 
 \end{document}
