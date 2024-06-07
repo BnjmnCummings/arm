@@ -685,8 +685,8 @@ int main(int argc, char **argv) {
     setupCPU();
 
     // Read from the file
-    if (argc > 1) {
-        if (!binaryFileLoader(argv[1])){
+    if (argc > 0) {
+        if (!binaryFileLoader(argv[0])){
             printf("binary file loader failed on file %s\n", argv[1]);
             exit(1);
         }
@@ -702,8 +702,8 @@ int main(int argc, char **argv) {
         printf("%s\n", argv[i]);
     }
 
-    if (argc > 2) {
-        FILE *file = fopen(argv[2], "w");
+    if (argc > 1) {
+        FILE *file = fopen(argv[1], "w");
 
         if (file == NULL) {
             fprintf( stderr, "Can't read given output file\n" );
