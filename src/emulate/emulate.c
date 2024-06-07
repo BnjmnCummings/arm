@@ -322,9 +322,9 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
     // Broken down into: 1 zero bits, L (1 bit), offset (12 bit), xn (4 bit)
     u_int32_t brokenDownOperand[] = {
             operand >> 18,
-            ((0b1 << 17) & operand) >> 17,
-            ((((2 << 12) - 1) << 5) & operand) >> 5,
-            (0b11111) & operand
+            0b1 & (operand >> 17),
+            ((1 << 12) - 1) & (operand >> 5),
+            0b11111 & operand
     };
     assert(brokenDownOperand[0] == 0);
     u_int32_t targetRegister = splitWord[6];
@@ -351,16 +351,16 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
         // broken down into: bit (1 bit), simm9? (9 bit), I (1 bit), bit (1 bit)
         u_int32_t brokenDownOffset[] = {
                 operand >> 11,
-                ((((2 << 8) - 1) << 2) & offset) >> 2,
-                ((0b1 << 1) & operand) >> 1,
-                (0b1) & offset
+                ((0b1 << 9) - 1) & (offset >> 2),
+                0b1 & (operand >> 1),
+                0b1 & offset
         };
         assert(brokenDownOffset[0] == brokenDownOffset[3]);
         // Register offset
         if (brokenDownOffset[0]) {
             assert((0b1111 & brokenDownOffset[1]) == 6);
 
-            u_int32_t xm = (((0b11111) << 4) & brokenDownOffset[1]) >> 4;
+            u_int32_t xm = 0b11111 & (brokenDownOffset[1] >> 4);
             assert((0 <= xm) && (xm <= 30));
             u_int64_t xmValue = readMemory(xm);
 
@@ -419,7 +419,7 @@ bool unconditionalBranch(const u_int32_t splitWord[]){
 bool registerBranch(u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
-    u_int32_t registerNumb = (((2 << 5) - 1) << 5) & splitWord[3];
+    u_int32_t registerNumb = 0b11111 & (splitWord[3] >> 5);
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 30));
@@ -470,9 +470,9 @@ bool conditionalBranch(u_int32_t splitWord[]){
     // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
     u_int32_t brokenDownOperand[] = {
             operand >> 24,
-            ((((2 << 19) - 1) << 5) & operand) >> 5, // simm19
-            ((1 << 4) & operand) >> 4,
-            (16 - 1) & operand // condition encoding
+            ((1 << 19) - 1) & (operand >> 5), // simm19
+            0b1 & (operand >> 4),
+            0b1111 & operand // condition encoding
     };
     assert(brokenDownOperand[0] == 0 && brokenDownOperand[2] == 0);
 
@@ -498,11 +498,10 @@ bool conditionalBranch(u_int32_t splitWord[]){
 int fDECycle(void){
     while (true){
         // Fetch
-        int pcValue = CPU.PC;
+        u_int64_t pcValue = CPU.PC;
 
         // Throw error code 2 if pc value points to outside memory
-        //TODO(if pc becomes unsigned int remove the <0 check)
-        if (pcValue > ((MEMORYSIZE) - 3) || pcValue < 0){
+        if (pcValue > ((MEMORYSIZE) - 3)){
             printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
             return 2;
         }
@@ -522,18 +521,19 @@ int fDECycle(void){
         }
 
         // Decode:
-        u_int32_t op0 = ((0b1111 << 24) & word) >> 24;
+        u_int32_t op0 = 0b1111 & (word >> 25);
 
         // 101x -> Branch group
         if ((op0 & 0b1110) == 0b1100) {
+            printf("Entering branch group with word: %d" ,word);
             // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
             // unsure if changing this to int is correct vs uint
             u_int32_t splitInstruction[] = {
                     word >> 31,
-                    ((1 << 30) & word) >> 30,
-                    ((15 << 26) & word) >> 26,
-                    ((2 << 26) - 1) & word
+                    0b1  & (word >> 30),
+                    0b1111 & (word >> 26),
+                    ((0b1 << 26) - 1) & word
             };
             assert(splitInstruction[2] == 5);
 
@@ -554,17 +554,18 @@ int fDECycle(void){
 
             // No PC increment as these instructions are all branches
         }
-            // 100x -> Data processing (immediate) group
+        // 100x -> Data processing (immediate) group
         else if ((op0 & 0b1110) == 0b1000) {
+            printf("Entering Data processing (immediate) group with word: %d" ,word);
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
                     word >> 31,
-                    ((0b11 << 29) & word) >> 29,
-                    ((0b111 << 26) & word) >> 26,
-                    ((0b111 << 23) & word) >> 23,
-                    ((((2 << 19) - 1) << 5) & word) >> 5,
-                    0b1111 & word
+                    0b11 & (word >> 29),
+                    0b111 & (word >> 26),
+                    0b111 & (word >> 23),
+                    ((0b1 << 19) - 1) & (word >> 5),
+                    0b11111 & word
             };
             assert(splitInstruction[2] == 4);
 
@@ -591,20 +592,21 @@ int fDECycle(void){
             CPU.PC += 4;
         }
         // x101 -> Data processing (register) group
-        else if ((op0 & 7) == 5) {
+        else if ((op0 & 0b111) == 0b101) {
+            printf("Entering Data processing (register) group with word: %d" ,word);
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
                     word >> 31,
-                    ((3 << 29) & word) >> 29,
-                    ((1<<28) & word) >> 28,
-                    ((3 << 26) & word) >> 26,
-                    ((1<<25) & word) >> 25,
-                    ((((2 << 5) - 1) << 21) & word) >> 21,
-                    ((((2 << 6) - 1) << 16) & word) >> 16,
-                    ((((2 << 7) - 1) << 10) & word) >> 10,
-                    ((((2 << 5) - 1) << 5) & word) >> 5,
-                    31 & word
+                    0b11 & (word >> 29),
+                    0b1 & (word >> 28),
+                    0b11 & (word >> 26),
+                    0b1 & (word >> 25),
+                    0b1111 & (word >> 21),
+                    0b11111 & (word >> 16),
+                    ((1 << 7) - 1) & (word >> 10),
+                    0b11111 & (word >> 5),
+                    0b11111 & word
             };
             assert(splitInstruction[3] == 2);
             assert(splitInstruction[4] == 1);
@@ -636,17 +638,18 @@ int fDECycle(void){
             CPU.PC += 4;
         }
         // x1x0 -> Loads and stores group
-        else if ((op0 & 5) == 4) {
+        else if ((op0 & 0b101) == 0b100) {
+            printf("Entering loads and stores group with word: %d" ,word);
             // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
                     word >> 31,
-                    ((1 << 30) & word) >> 30,
-                    ((1 << 29) & word) >> 29,
-                    ((((2 << 4) - 1) << 25) & word) >> 25,
-                    ((1 << 24) & word) >> 24,
-                    ((((2 << 18) - 1) << 5) & word) >> 5,
-                    31 & word
+                    0b1  & (word >> 30),
+                    0b1 & (word >> 29),
+                    0b1111 & (word >> 25),
+                    0b1 & (word >> 24),
+                    ((0b1 << 18) - 1) & (word >> 5),
+                    0b11111 & word
             };
             for (int i = 0; i <= 6; i ++ ){
                 printf("splitInstruction at %d is: %d\n", i, splitInstruction[i]);
