@@ -364,9 +364,8 @@ bool loadLiteralInstruction(u_int32_t splitWord[]){
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool singleDataTransferInstruction(const u_int32_t splitWord[]){
-    //TODO(lots of casts here uint to int especially when reading xm ,xn. These def need a check)
-
-    // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+// Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
+    printf("At start::::::::::::::::::\n");
     u_int32_t operand = splitWord[5];
     bool registerMode = splitWord[1];
 
@@ -386,6 +385,7 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
 
     // U == 1 then unsigned immediate offset
     if (splitWord[4]) {
+        printf("U = 1\n");
         u_int32_t offset = brokenDownOperand[2] * 4;
         // 64 bit mode
         if (splitWord[1]) {
@@ -406,9 +406,9 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
                 0b1 & (operand >> 1),
                 0b1 & offset
         };
-        assert(brokenDownOffset[0] == brokenDownOffset[3]);
         // Register offset
         if (brokenDownOffset[0]) {
+            printf("register offset\n");
             assert((0b1111 & brokenDownOffset[1]) == 6);
 
             u_int32_t xm = 0b11111 & (brokenDownOffset[1] >> 4);
@@ -424,22 +424,25 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
             int simm9 = brokenDownOffset[1];
             // I == 1 so pre indexed
             if (brokenDownOffset[2]) {
+
+                printf("U = 0, I = 1\n");
                 assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
                 assert((-256 <= simm9) && (simm9 <= 255));
                 u_int64_t readWriteValue = xnValue + simm9;
 
                 writeRegister(registerMode, targetRegister, readMemory(readWriteValue));
-                writeMemory(registerMode, xnValue, readWriteValue);
+                writeRegister(registerMode, xn, readWriteValue);
             }
                 // I must be 0 so post indexed
             else {
+                printf("U = 0, I = 0\n");
                 assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
-                writeRegister(registerMode, targetRegister, readMemory(xnValue));
+                writeRegister(registerMode, targetRegister, xnValue);
 
                 assert((-256 <= simm9) && (simm9 <= 255));
                 u_int64_t newValue = xnValue + simm9;
 
-                writeMemory(registerMode, xnValue, newValue);
+                writeRegister(registerMode, xn, newValue);
             }
         }
         // in this situation a pattern must be matched so error message needed for nothing matching
@@ -709,10 +712,10 @@ int fDECycle(void){
             }
 
             if ((splitInstruction[0] && splitInstruction[2]) == 1) {
-                loadLiteralInstruction(splitInstruction);
+                singleDataTransferInstruction(splitInstruction);
             }
             else if ((splitInstruction[0] || splitInstruction[2] || splitInstruction[4]) == 0) {
-                singleDataTransferInstruction(splitInstruction);
+                loadLiteralInstruction(splitInstruction);
             }
                 // no matching instruction throws error code 7
             else {
