@@ -221,6 +221,7 @@ bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool n
     if (negate) {
         op = ~op;
     }
+    uint64_t result;
     switch (opc) {
         case 0b00: // Bitwise M
             writeRegister(sf, rd, rn & op);
@@ -235,6 +236,8 @@ bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool n
             writeRegister(sf, rd, rn & op);
             CPU.PSTATE.Negative = (rn & op) >> (32 + (32 * sf) - 1);
             CPU.PSTATE.Zero = (rn & op) == 0;
+            CPU.PSTATE.Carry = 0;
+            CPU.PSTATE.Overflow = 0;
             break;
     }
     return true;
@@ -280,8 +283,6 @@ bool logicalShiftInstruction(u_int splitWord[]) {
 
     registerParser(opc, splitWord[9], rn, secOp, sf, negate);
 
-    CPU.PSTATE.Carry = 0;
-    CPU.PSTATE.Overflow = 0;
     return true;
 }
 
@@ -472,8 +473,8 @@ bool registerBranch(u_int32_t splitWord[]){
     u_int32_t registerNumb = 0b11111 & (splitWord[3] >> 5);
 
     // find the new PC value and check validity
-    assert((0 <= registerNumb) && (registerNumb <= 30));
-    u_int32_t newPCAddressLocation = readMemory(registerNumb);
+    assert((0 <= registerNumb) && (registerNumb <= 31));
+    u_int32_t newPCAddressLocation = readRegister(splitWord[0], registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -537,6 +538,8 @@ bool conditionalBranch(const u_int32_t splitWord[]){
 
         // update the PC value
         CPU.PC = CPU.PC + offset;
+    } else {
+        CPU.PC += 4;
     }
     // successful execution no matter the state of condition so return true
     return true;
@@ -606,7 +609,7 @@ int fDECycle(void){
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 0b1110) == 0b1000) {
-            printf("Entering Data processing (immediate) group with word: %u" ,word);
+            printf("Entering Data processing (immediate) group with word: %u\n" ,word);
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
@@ -689,7 +692,7 @@ int fDECycle(void){
         }
         // x1x0 -> Loads and stores group
         else if ((op0 & 0b101) == 0b100) {
-            printf("Entering loads and stores group with word: %u" ,word);
+            printf("Entering loads and stores group with word: %u\n" ,word);
             // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
@@ -704,8 +707,6 @@ int fDECycle(void){
             for (int i = 0; i <= 6; i ++ ){
                 printf("splitInstruction at %d is: %d\n", i, splitInstruction[i]);
             }
-            printf("hello");
-//            assert(splitInstruction[3] == 12);
 
             if ((splitInstruction[0] && splitInstruction[2]) == 1) {
                 loadLiteralInstruction(splitInstruction);
