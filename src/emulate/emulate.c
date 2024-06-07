@@ -381,7 +381,7 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
     assert((0 <= targetRegister) && (targetRegister <= 30));
     u_int32_t xn = brokenDownOperand[3];
     assert((0 <= xn) && (xn <= 30));
-    u_int64_t xnValue = readRegister(registerMode, xn);
+    u_int64_t xnValue = readRegister(1, xn);
 
     // U == 1 then unsigned immediate offset
     if (splitWord[4]) {
@@ -431,18 +431,18 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
                 u_int64_t readWriteValue = xnValue + simm9;
 
                 writeRegister(registerMode, targetRegister, readMemory(readWriteValue));
-                writeRegister(registerMode, xn, readWriteValue);
+                writeRegister(1, xn, readWriteValue);
             }
                 // I must be 0 so post indexed
             else {
                 printf("U = 0, I = 0\n");
                 assert((0 <= xnValue) && (xnValue < MEMORYSIZE));
-                writeRegister(registerMode, targetRegister, xnValue);
+                writeRegister(registerMode, targetRegister, readMemory(xnValue));
 
                 assert((-256 <= simm9) && (simm9 <= 255));
                 u_int64_t newValue = xnValue + simm9;
 
-                writeRegister(registerMode, xn, newValue);
+                writeRegister(1, xn, newValue);
             }
         }
         // in this situation a pattern must be matched so error message needed for nothing matching
@@ -463,7 +463,7 @@ bool unconditionalBranch(const u_int32_t splitWord[]){
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
-    CPU.PC = CPU.PC + offset;
+    CPU.PC += offset;
     return true;
 }
 
@@ -477,7 +477,7 @@ bool registerBranch(u_int32_t splitWord[]){
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 31));
-    u_int32_t newPCAddressLocation = readRegister(splitWord[0], registerNumb);
+    u_int64_t newPCAddressLocation = readRegister(splitWord[0], registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -540,7 +540,7 @@ bool conditionalBranch(const u_int32_t splitWord[]){
         assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
         // update the PC value
-        CPU.PC = CPU.PC + offset;
+        CPU.PC += offset;
     } else {
         CPU.PC += 4;
     }
