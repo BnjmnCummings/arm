@@ -47,25 +47,15 @@ static void printPState(FILE *filePath, processor *CPU) {
 static void printRegisters(FILE *filePath, processor *CPU) {
     //general purpose registers:
     for(int i = 0; i < NUMBERGENERALREGISTERS; i++) {
-        fprintf(filePath,"X%0*d = %0*lx\n", INDEXWIDTH, i, REGISTERWIDTH, CPU->generalPurpose[i]);
+        fprintf(filePath,"X%0*d    = %0*lx\n", INDEXWIDTH, i, REGISTERWIDTH, CPU->generalPurpose[i]);
     }
 
     //Program counter
-    fprintf(filePath,"PC = %0*lx\n", REGISTERWIDTH, CPU->PC);
+    fprintf(filePath,"PC     = %0*lx\n", REGISTERWIDTH, CPU->PC);
 
 }
 
 static void printNonZeroMemory(FILE *filePath, processor *CPU) {
-
-    u_int *ip = CPU->memory;
-
-    //TODO: Find a better way to do this condition
-//    while (*ip != NULL) {
-//        //print in format:
-//        //address: hex value
-//        fprintf(filePath,"%p: 0x%0*x\n", ip, MEMORYWIDTH, combineLittleEndian(ip));
-//        ip += 4;
-//    }
     for (int i = 0; i < MEMORYSIZE; i += 4) {
         uint word = combineLittleEndian(i, CPU);
         if (word) {
@@ -81,6 +71,6 @@ void writeCPU(FILE *filePath, processor *CPU) {
     //P-STATE
     printPState(filePath, CPU);
     //Non-Zero Memory
-    fprintf(filePath, "Non-Zero memory:\n");
+    fprintf(filePath, "Non-Zero Memory:\n");
     printNonZeroMemory(filePath, CPU);
 }

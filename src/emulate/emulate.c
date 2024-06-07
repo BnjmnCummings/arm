@@ -106,7 +106,7 @@ bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data) {
 bool arithmeticInstruction(u_int32_t splitWord[]){
     u_int32_t operand[] = {
         splitWord[4] << 17,
-        ((((1 << 11) - 1) << 5) & splitWord[4]) >> 5,
+        ((1 << 12) - 1) & (splitWord[4] >> 5),
         splitWord[4] & 0b11111
     };
     uint64_t op2 = operand[1];
@@ -116,6 +116,7 @@ bool arithmeticInstruction(u_int32_t splitWord[]){
     uint64_t rn = readRegister(splitWord[0], operand[2]);
 
     uint64_t result;
+    uint64_t sigBitShift = (32 + (32 * splitWord[0]) - 1);
     switch (splitWord[1])
     {
     //add
@@ -125,7 +126,6 @@ bool arithmeticInstruction(u_int32_t splitWord[]){
     //adds 11 - 110000 - 111111
     case (0b01):
         result = rn + op2;
-        uint64_t sigBitShift = (32 + (32 * splitWord[0]) - 1);
         int check = (int) rn + (int) op2;
         CPU.PSTATE.Negative = result >> sigBitShift;
         CPU.PSTATE.Zero = result == 0;
@@ -139,12 +139,13 @@ bool arithmeticInstruction(u_int32_t splitWord[]){
     //subs
     case (0b11):
         result = rn - op2;
-        CPU.PSTATE.Negative = result < 0;
+        CPU.PSTATE.Negative = result >> sigBitShift;
         CPU.PSTATE.Zero = result == 0;
         CPU.PSTATE.Carry = 0; //TODO - check for carry
         CPU.PSTATE.Overflow = rn < op2; //TODO - check for overflow
         break;
     default:
+        result = 0;
         break;
     }
 
@@ -685,8 +686,8 @@ int main(int argc, char **argv) {
     setupCPU();
 
     // Read from the file
-    if (argc > 0) {
-        if (!binaryFileLoader(argv[0])){
+    if (argc > 1) {
+        if (!binaryFileLoader(argv[1])){
             printf("binary file loader failed on file %s\n", argv[1]);
             exit(1);
         }
@@ -702,8 +703,8 @@ int main(int argc, char **argv) {
         printf("%s\n", argv[i]);
     }
 
-    if (argc > 1) {
-        FILE *file = fopen(argv[1], "w");
+    if (argc > 2) {
+        FILE *file = fopen(argv[2], "w");
 
         if (file == NULL) {
             fprintf( stderr, "Can't read given output file\n" );
