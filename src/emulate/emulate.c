@@ -57,6 +57,7 @@ u_int32_t read32BitModeRegister(u_int32_t registerNumb) {
 }
 
 u_int64_t readRegister(bool in64BitMode, u_int32_t registerNumb){
+    if (registerNumb == 31) { return 0; }
     assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
         return CPU.generalPurpose[registerNumb];
@@ -72,6 +73,7 @@ bool write32BitModeRegister(u_int32_t registerNumb, u_int64_t data) {
 }
 
 bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
+    if (registerNumb == 31) { return true; }
     assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
         CPU.generalPurpose[registerNumb] = data;
@@ -100,6 +102,7 @@ bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data) {
     return true;
 }
 
+
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
@@ -110,7 +113,7 @@ bool arithmeticInstruction(u_int32_t splitWord[]){
         splitWord[4] & 0b11111
     };
     uint64_t op2 = operand[1];
-    if (operand[0] == 1) {
+    if (operand[0] == 0) {
         op2 = op2 << 12;
     }
     uint64_t rn = readRegister(splitWord[0], operand[2]);
@@ -286,7 +289,53 @@ bool logicalShiftInstruction(u_int splitWord[]) {
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
 bool arithmeticShiftInstruction(u_int splitWord[]){
-    logicalShiftInstruction(splitWord);
+    u_int opc = splitWord[1];
+    u_int shiftMask = (splitWord[5] >> 2) & 0x3;
+    u_int sf = splitWord[0];
+    u_int64_t firstOp = splitWord[7];
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+    uint64_t op2 = shift(rm, firstOp, shiftMask, sf);
+
+    uint64_t result;
+    uint64_t sigBitShift = (32 + (32 * sf) - 1);
+    switch (opc)
+    {
+    //add
+    case (0b00):
+        result = rn + op2;
+        break;
+    //adds
+    case (0b01):
+        result = rn + op2;
+        int check = (int) rn + (int) op2;
+        CPU.PSTATE.Negative = result >> sigBitShift;
+        CPU.PSTATE.Zero = result == 0;
+        CPU.PSTATE.Carry = check >= (1 >> sigBitShift);
+        CPU.PSTATE.Overflow = CPU.PSTATE.Carry;
+        break;
+    //sub
+    case (0b10):
+        result = rn - op2;
+        break;
+    //subs
+    case (0b11):
+        result = rn - op2;
+        CPU.PSTATE.Negative = result >> sigBitShift;
+        CPU.PSTATE.Zero = result == 0;
+        CPU.PSTATE.Carry = 0; //TODO - check for carry
+        CPU.PSTATE.Overflow = rn < op2; //TODO - check for overflow
+        break;
+    default:
+        result = 0;
+        break;
+    }
+
+    // write to Rd
+    writeRegister(sf, splitWord[9], result);
+
+    return true;
+
     //TODO(set arithmetic PSTATE flags)
     return true;
 }
@@ -403,14 +452,14 @@ bool singleDataTransferInstruction(const u_int32_t splitWord[]){
 bool unconditionalBranch(const u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
-    int offset = splitWord[3] * 4;
+    int64_t offset = splitWord[3] * 4;
 
     // find the new PC value and check validity
-    int newPCAddressLocation = CPU.PC + offset;
+    int64_t newPCAddressLocation = (int64_t) CPU.PC + offset;
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
-    CPU.PC = readMemory(CPU.PC + offset);
+    CPU.PC = CPU.PC + offset;
     return true;
 }
 
@@ -464,7 +513,7 @@ bool conditionalBranchConditionCheck(u_int32_t conditionCode){
 // conditionalBranch is a function taking the split instruction (word) as argument
 // It checks an encoded condition and if true, it applies an indicated offset to the PC
 // It returns true on a successful execution, false otherwise
-bool conditionalBranch(u_int32_t splitWord[]){
+bool conditionalBranch(const u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     u_int32_t operand = splitWord[3];
 
@@ -487,7 +536,7 @@ bool conditionalBranch(u_int32_t splitWord[]){
         assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
         // update the PC value
-        CPU.PC = readMemory(CPU.PC + offset);
+        CPU.PC = CPU.PC + offset;
     }
     // successful execution no matter the state of condition so return true
     return true;
@@ -499,7 +548,7 @@ bool conditionalBranch(u_int32_t splitWord[]){
 int fDECycle(void){
     while (true){
         // Fetch
-        u_int64_t pcValue = CPU.PC;
+        uint32_t pcValue = CPU.PC;
 
         // Throw error code 2 if pc value points to outside memory
         if (pcValue > ((MEMORYSIZE) - 3)){
@@ -525,8 +574,8 @@ int fDECycle(void){
         u_int32_t op0 = 0b1111 & (word >> 25);
 
         // 101x -> Branch group
-        if ((op0 & 0b1110) == 0b1100) {
-            printf("Entering branch group with word: %u" ,word);
+        if ((op0 & 0b1110) == 0b1010) {
+            printf("Entering branch group with word: %u\n" ,word);
             // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
             // unsure if changing this to int is correct vs uint
