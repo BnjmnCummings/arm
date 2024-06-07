@@ -502,13 +502,13 @@ int fDECycle(void){
 
         // Throw error code 2 if pc value points to outside memory
         if (pcValue > ((MEMORYSIZE) - 3)){
-            printf("fetch failed on nonexistent memory location with pc value: %d\n", pcValue);
+            printf("fetch failed on nonexistent memory location with pc value: %lu\n", pcValue);
             return 2;
         }
 
         // Throw error code 3 if pc points to a memory location not at the start of a word
         if (pcValue % 4 != 0){
-            printf("fetch failed on nonaligned memory location with pc value: %d\n", pcValue);
+            printf("fetch failed on nonaligned memory location with pc value: %lu\n", pcValue);
             return 3;
         }
 
@@ -525,7 +525,7 @@ int fDECycle(void){
 
         // 101x -> Branch group
         if ((op0 & 0b1110) == 0b1100) {
-            printf("Entering branch group with word: %d" ,word);
+            printf("Entering branch group with word: %u" ,word);
             // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
             // TODO(Replace with hashmap if possible)
             // unsure if changing this to int is correct vs uint
@@ -556,7 +556,7 @@ int fDECycle(void){
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 0b1110) == 0b1000) {
-            printf("Entering Data processing (immediate) group with word: %d" ,word);
+            printf("Entering Data processing (immediate) group with word: %u" ,word);
             // Decode to: sf, opc, 100, opi, operand, rd
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
@@ -593,7 +593,7 @@ int fDECycle(void){
         }
         // x101 -> Data processing (register) group
         else if ((op0 & 0b111) == 0b101) {
-            printf("Entering Data processing (register) group with word: %d" ,word);
+            printf("Entering Data processing (register) group with word: %u" ,word);
             // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
@@ -639,7 +639,7 @@ int fDECycle(void){
         }
         // x1x0 -> Loads and stores group
         else if ((op0 & 0b101) == 0b100) {
-            printf("Entering loads and stores group with word: %d" ,word);
+            printf("Entering loads and stores group with word: %u" ,word);
             // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
             // TODO(Replace with hashmap if possible)
             u_int32_t splitInstruction[] = {
@@ -698,8 +698,12 @@ int main(int argc, char **argv) {
         exit(2);
     }
 
+    for (int i = 0; i < argc; i++) {
+        printf("%s\n", argv[i]);
+    }
+
     if (argc > 2) {
-        FILE *file = fopen(argv[2], "r");
+        FILE *file = fopen(argv[2], "w");
 
         if (file == NULL) {
             fprintf( stderr, "Can't read given output file\n" );
