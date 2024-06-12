@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   }
   
   //pass file pointer into filereader.c
-  initfilewriter(out);
+  initFileWriter(out);
   //close files
   fclose(in);
   fclose(out);

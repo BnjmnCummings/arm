@@ -7,8 +7,8 @@
 static FILE *out;
 
 //initialises the output stream as given by cli arguments
-extern void initfilewriter(FILE *);
+extern void initFileWriter(FILE *);
 //invokes fwrite with apporopriate arguments
-extern void writeline(const void *, size_t,  size_t);
+extern void writeInstruction(const void *);
 // size_t fwrite( const void *ptr, size_t size, size_t nmemb, FILE *stream );
 #endif //ARMV8_31_ASS_FILE_WRITER_H

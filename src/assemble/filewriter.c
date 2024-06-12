@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include "filewriter.h"
+#define INSTR_SIZE 4 // 4 bytes
 
 static FILE *out;
 
-void initfilewriter(FILE *fp) { out = fp; }
+void initFileWriter(FILE *fp) { out = fp; }
 
-void writeline(const void *ptr , size_t size,  size_t nmemb) {
+void writeInstruction(const void *ptr) {
     //TODO
-    size_t nwritten = fwrite(ptr, size,  nmemb, out);
+    //it's likely that  size and nmemb are constants
+    size_t fcode = fwrite(ptr, INSTR_SIZE,  1, out);
 
-    //error handle with nwritten. 
-    //if nwritten < nmemb then exception has occured
-    if(nwritten < nmemb) {
+    //error handle with fcode. 
+    //if fcode < 1 then exception has occured
+    if(fcode < 1) {
         //todo handle exception
     }
     
