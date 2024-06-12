@@ -1,0 +1,6 @@
+#ifndef ARMV8_31_ASS_FILE_WRITER_H
+#define ARMV8_31_ASS_FILE_WRITER_H
+
+// code
+
+#endif //ARMV8_31_ASS_FILE_WRITER_H

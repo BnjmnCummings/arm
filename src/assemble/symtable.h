@@ -1,0 +1,4 @@
+#ifndef ARMV8_31_ASS_SYMTABLE_H
+#define ARMV8_31_ASS_SYMTABLE_H
+    //code
+#endif //ARMV8_31_ASS_SYMTABLE_H
