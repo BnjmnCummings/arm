@@ -1,7 +1,12 @@
-#include "processor.h"
 #ifndef ARMV8_31_FILE_WRITER_H
 #define ARMV8_31_FILE_WRITER_H
 
-void writeCPU(FILE *file, processor *CPU);
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "processor.h"
+#include "emulate.h"
+
+void writeCPU(FILE *file);
 
 #endif //ARMV8_31_FILE_WRITER_H

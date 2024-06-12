@@ -5,7 +5,7 @@
 CC	=	gcc
 CFLAGS	=	-g -Wall
 BUILD	=	emulate
-OBJS	=	emulate.o filewriter.o
+OBJS	=	emulate.o filewriter.o processor.o dataprocess.o datatransfer.o branch.o
 
 all:	$(BUILD)
 
@@ -15,5 +15,9 @@ clean:
 emulate:	$(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o emulate $(LDLIBS)
 
-emulate.o:	emulate.c filewriter.h processor.h
-filewriter.o:	filewriter.c filewriter.h processor.h
+emulate.o:	emulate.c emulate.h filewriter.h processor.h dataprocess.h datatransfer.h branch.h
+filewriter.o:	filewriter.c filewriter.h
+processor.o:	processor.c processor.h
+dataprocess.o:	dataprocess.c dataprocess.h
+datatransfer.o:	datatransfer.c dataprocess.h
+branch.o:	branch.c branch.h
