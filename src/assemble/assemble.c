@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include "filewriter.h"
 
 int main(int argc, char **argv) {
   
@@ -17,13 +18,16 @@ int main(int argc, char **argv) {
   }
 
   //create output file and pass into filewriter.c
-  FILE *out = fopen(argv[2], "w");
+  FILE *out = fopen(argv[2], "wb");
   if(in == NULL) {
     fprintf( stderr,"Error: can’t open %s\n", argv[2] );
     exit(1);
   }
   
   //pass file pointer into filereader.c
-
+  initfilewriter(out);
+  //close files
+  fclose(in);
+  fclose(out);
   return EXIT_SUCCESS;
 }
