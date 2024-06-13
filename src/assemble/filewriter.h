@@ -1,11 +1,9 @@
-#include <stdio.h>
-#define INSTR_SIZE 4 // 4 bytes
-
 #ifndef ARMV8_31_ASS_FILE_WRITER_H
 #define ARMV8_31_ASS_FILE_WRITER_H
 
-//static global variable stores pointer to the output file
-static FILE *out;
+#include <stdio.h>
+#include <stdlib.h>
+#define INSTR_SIZE 4 // 4 bytes
 
 //initialises the output stream as given by cli arguments
 extern void initFileWriter(char *);

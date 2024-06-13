@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "filereader.h"
-#include "filewriter.h"
+
+static FILE *in;
 
 void initFileReader(char * filename) {
     in = fopen(filename, "r");

@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include "assemble.h"
 #include "filewriter.h"
 #include "filereader.h"
 
