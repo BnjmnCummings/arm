@@ -19,7 +19,7 @@ typedef struct {
 } pstate;
 
 typedef struct {
-    uint32_t memory[MEMORYSIZE];
+    uint8_t memory[MEMORYSIZE];
     u_int64_t generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const uint64_t ZR; // zero register
     u_int64_t PC; // program counter
@@ -33,7 +33,7 @@ void incrementPC(void);
 u_int64_t readRegister(bool in64BitMode, u_int32_t registerNumb);
 bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data);
 
-u_int32_t readMemory(u_int64_t memoryAddress);
+uint64_t readMemory(bool in64BitMode, u_int64_t memoryAddress);
 bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data);
 
 #endif //ARMV8_31_PROCESSOR_H

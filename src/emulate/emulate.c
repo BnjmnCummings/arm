@@ -8,8 +8,8 @@
 extern processor CPU;
 
 u_int64_t getMask(int start, int end) {
-    assert(start <= end);
-    return ((u_int64_t) 2 << (end - start)) << start;
+    if (start >= end) { return 0; }
+    return (((u_int64_t) 2 << (end - start)) - 1) << start;
 }
 
 // binaryFileLoader is a function taking the filename as an argument
@@ -48,13 +48,13 @@ int fDECycle(void){
         }
 
         // Throw error code 3 if pc points to a memory location not at the start of a word
-        if (pcValue % 4 != 0){
-            printf("fetch failed on nonaligned memory location with pc value: %u\n", pcValue);
-            return 3;
-        }
+        // if (pcValue % 4 != 0){
+        //     printf("fetch failed on nonaligned memory location with pc value: %u\n", pcValue);
+        //     return 3;
+        // }
 
         // read word in little endian
-        u_int32_t word = readMemory(pcValue);
+        u_int32_t word = readMemory(0, pcValue);
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
@@ -100,6 +100,11 @@ int fDECycle(void){
 int main(int argc, char **argv) {
 
     setupCPU();
+    
+    // int16_t x = -8;
+    // uint32_t y = (uint32_t) ((uint16_t) x);
+    // printf("%d, %u\n", x, y);
+
 
     // Read from the file
     if (argc > 1) {
@@ -112,11 +117,8 @@ int main(int argc, char **argv) {
     int e;
     if ((e = fDECycle()) != 0){
         printf("FDE cycle failed with error code %d\n", e);
+        writeCPU(stdout);
         exit(2);
-    }
-
-    for (int i = 0; i < argc; i++) {
-        printf("%s\n", argv[i]);
     }
 
     if (argc > 2) {

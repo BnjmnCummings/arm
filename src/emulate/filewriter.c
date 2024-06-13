@@ -15,11 +15,7 @@ static u_int combineLittleEndian(u_int index) {
     u_int total = 0;
 
     for(int i = 0; i<4; i++) {
-//        total += (*arr++) << (i*8);
         total += (CPU.memory[index + i]) << (i * 8);
-         //dereference the pointer and shift by
-        //(number of bits = 8*index relative to where we started)
-        //finally increment the pointer
     }
 
     return total;
