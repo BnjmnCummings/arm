@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "filewriter.h"
+
+static FILE *out;
 
 void initFileWriter(char *filename) { 
     out = fopen(filename, "wb");
