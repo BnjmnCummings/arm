@@ -37,6 +37,5 @@ int get_address(char *label) {
 void free_table(void) {
     free(table->lb);
     free(table->addr);
-
     free(table);
 }
