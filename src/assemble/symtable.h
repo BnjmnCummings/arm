@@ -1,7 +1,7 @@
 #ifndef ARMV8_31_ASS_SYMTABLE_H
 #define ARMV8_31_ASS_SYMTABLE_H
 //code
-#define MAXSYMBOLS 10
+#define INITIALCAP 10
 #define MAXSYMLEN 64
 
 typedef char[MAXSYMLEN] label;

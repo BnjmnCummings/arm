@@ -1,5 +1,6 @@
 #include "symtable.h"
 #include <stdlib.h>
+#include "string.h"
 
 static symtable *table;
 
@@ -10,10 +11,9 @@ static void resize(void) {
 }
 
 void store_symbol(char *label, int addr) {
-    table->lb[table->nitems] = label;
-    table->addr[table->nitems] = abbr;
+    strcpy(table->lb[table->nitems], label);
+    table->addr[table->nitems] = addr;
     table->nitems++;
-
     if (table->nitems >= table->capacity) {
         resize();
     }
@@ -22,13 +22,13 @@ void store_symbol(char *label, int addr) {
 void init_table(void) {
     table = (symtable *) malloc(sizeof(symtable));
     table->nitems = 0;
-    table->capacity = MAXSYMBOLS;
-    table->addr = malloc(MAXSYMBOLS * sizeof(int));
-    table->lb = malloc(MAXSYMBOLS * sizeof(label));
+    table->capacity = INITIALCAP;
+    table->addr = malloc(INITIALCAP * sizeof(int));
+    table->lb = malloc(INITIALCAP * sizeof(label));
 }
 
 int get_address(char *label) {
-    for (int i = 0; i < MAXSYMBOLS; i++) {
+    for (int i = 0; i < table->nitems; i++) {
         if (strncmp(table->lb[i], label, MAXSYMLEN) == 0) {
             return table->addr[i];
         }
