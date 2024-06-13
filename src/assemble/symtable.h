@@ -2,11 +2,12 @@
 #define ARMV8_31_ASS_SYMTABLE_H
 #include <stdlib.h>
 #include <string.h>
+#include "parser.h"
 
 #define INITIALCAP 10
-#define MAXSYMLEN 64
+#define MAXSYMLEN 512
 
-typedef char[MAXSYMLEN] label;
+typedef char label[MAXSYMLEN];
 
 typedef struct {
     int nitems;
@@ -15,9 +16,9 @@ typedef struct {
     int *addr;
 } symtable;
 
-void store_symbol(char *line, int addr);
-void init_table(void);
-int get_address(char *label);
-void free_table(void);
+extern void store_symbol(char *label, int addr);
+extern void init_table(void);
+extern int get_address(char *label);
+extern void free_table(void);
 
 #endif //ARMV8_31_ASS_SYMTABLE_H

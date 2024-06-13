@@ -12,8 +12,12 @@ int main(int argc, char **argv) {
   //initialise input and output files
   initFileReader(argv[1]);
   initFileWriter(argv[2]);
+  init_table();
 
-  readAssFile();
+  read_file(&read_symbol);
+  rclose();
+  initFileReader(argv[1]);
+  read_file(&read_line);
 
   rclose();
   wclose();
