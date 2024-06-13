@@ -44,21 +44,21 @@ bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
     return write32BitModeRegister(registerNumb, data);
 }
 
-u_int32_t readMemory(u_int64_t memoryAddress){
+uint64_t readMemory(bool in64BitMode, u_int64_t memoryAddress){
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    uint32_t word = 0;
-    for (int i = 0; i < 4; i++) {
-        word += CPU.memory[memoryAddress + i] << (BYTESIZE * i);
+    uint64_t word = 0;
+    for (int i = 0; i < 4 + (4 * in64BitMode); i++) {
+        // printf("word: %lu, add: %lu\n", word, ( (uint64_t) CPU.memory[memoryAddress + i]) << BYTESIZE * i);
+        word += ( (uint64_t) CPU.memory[memoryAddress + i]) << BYTESIZE * i;
     }
-    printf("%u\n", word);
     return word;
 }
 
 bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data) {
     assert((0 <= memoryAddress) && (memoryAddress < MEMORYSIZE));
-    u_int32_t byteSizeMask = ((0b1 << BYTESIZE) - 1);
+    u_int32_t byteSizeMask = ((2 << BYTESIZE) - 1);
     for (int i = 0; i < 4 + (4 * in64BitMode); i ++){
-        CPU.memory[memoryAddress + i] = data & (byteSizeMask << (BYTESIZE * i));
+        CPU.memory[memoryAddress + i] = (data >> (BYTESIZE * i)) & byteSizeMask;
     }
     return true;
 }
