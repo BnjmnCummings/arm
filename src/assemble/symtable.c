@@ -1,6 +1,4 @@
 #include "symtable.h"
-#include <stdlib.h>
-#include "string.h"
 
 static symtable *table;
 

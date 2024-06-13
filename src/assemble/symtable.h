@@ -1,6 +1,8 @@
 #ifndef ARMV8_31_ASS_SYMTABLE_H
 #define ARMV8_31_ASS_SYMTABLE_H
-//code
+#include <stdlib.h>
+#include <string.h>
+
 #define INITIALCAP 10
 #define MAXSYMLEN 64
 
