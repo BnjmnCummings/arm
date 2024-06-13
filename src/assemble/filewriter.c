@@ -12,7 +12,6 @@ void initFileWriter(char *filename) {
 
 void writeInstruction(const void *ptr) {
     fwrite(ptr, INSTR_SIZE,  1, out);
-    //error handle with fcode. 
     if( ferror(out) ) {
         fprintf( stderr, "Error occurred writing to file\n");
         exit(1);

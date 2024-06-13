@@ -14,6 +14,8 @@ int main(int argc, char **argv) {
   initFileReader(argv[1]);
   initFileWriter(argv[2]);
 
+  readAssFile();
+
   rclose();
   wclose();
   return EXIT_SUCCESS;

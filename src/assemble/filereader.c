@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "filereader.h"
+#include "filewriter.h"
 
 void initFileReader(char * filename) {
     in = fopen(filename, "r");
@@ -10,7 +11,7 @@ void initFileReader(char * filename) {
     }
 }
 
-void read() {
+void readAssFile() {
     
     char *buffer = malloc(MAX_LINE_LENGTH);
 
