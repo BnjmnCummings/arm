@@ -1,0 +1,306 @@
+#include "dataprocess.h"
+
+extern processor CPU;
+
+static void processArithmetic(uint64_t opc, int64_t rn, uint64_t op2, bool sf, uint32_t rd) {
+    int64_t result;
+    uint64_t sigBitShift = (32 + (32 * sf) - 1);
+
+    switch (opc)
+    {
+    //add
+    case (0b00):
+        result = rn + op2;
+        break;
+    //adds
+    case (0b01):
+        result = rn + op2;
+        CPU.PSTATE.Negative = (result >> sigBitShift) & 0b1;
+        CPU.PSTATE.Zero = result == 0;
+        if ((int64_t) op2 >= 0) {
+            // (op2 >> sigBitShift) & 0b1
+        CPU.PSTATE.Carry = result < rn;
+        CPU.PSTATE.Overflow = result < rn;
+        } else {
+        CPU.PSTATE.Carry = result > rn;
+        CPU.PSTATE.Overflow = result > rn;
+        }
+        break;
+    //sub
+    case (0b10):
+        result = rn - op2;
+        break;
+    //subs
+    case (0b11):
+        result = rn - op2;
+        CPU.PSTATE.Negative = (result >> sigBitShift) & 0b1;
+        CPU.PSTATE.Zero = result == 0;
+        if ((int64_t) op2 >= 0) {
+            CPU.PSTATE.Overflow = result > rn;
+            CPU.PSTATE.Carry = result >= 0;
+        } else {
+            CPU.PSTATE.Overflow = result < rn;
+            CPU.PSTATE.Carry = result <= 0;
+        }
+        break;
+    default:
+        result = 0;
+        break;
+    }
+
+    // write to Rd
+    writeRegister(sf, rd, result);
+}
+
+// arithmeticInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+static bool arithmeticInstruction(u_int32_t splitWord[]){
+    u_int32_t operand[] = {
+        splitWord[4] >> 17,
+        ((1 << 12) - 1) & (splitWord[4] >> 5),
+        splitWord[4] & 0b11111
+    };
+    uint64_t op2 = operand[1];
+    if (operand[0]) {
+        op2 = op2 << 12;
+    }
+    int64_t rn = readRegister(splitWord[0], operand[2]);
+    processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[5]);
+
+    return true;
+}
+
+// wideMoveInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+static bool wideMoveInstruction(u_int32_t splitWord[]){
+    uint64_t operand[] = {
+        splitWord[4] >> 16,
+        splitWord[4] & ((2 << 15) - 1)
+    };
+    int sh = operand[0] * 16;
+    uint64_t op = operand[1] << sh;
+    uint64_t result;
+    switch (splitWord[1])
+    {
+    //movk
+    case (0b00):
+        result = ~op;
+        break;
+    //movz
+    case (0b10):
+        result = op;
+        break;
+    //movk
+    case (0b11):{
+        uint64_t rd = readRegister(splitWord[0], splitWord[5]);
+        result = (rd & getMask(sh + 16, 63)) + op + (rd & getMask(0, sh - 1));
+        break;
+    }
+    default:
+        result = 0;
+        break;
+    }
+    writeRegister(splitWord[0], splitWord[5], result);
+    return true;
+}
+
+static u_int64_t shift(uint64_t val, uint64_t inc, uint64_t type, bool sf) {
+    u_int64_t res;
+    uint64_t maskVal = (32 + (32 * sf) - 1);
+    // lsl shift
+    if (type == 0b00) {
+        res = val << inc;
+    }
+        // lsr shift
+    else if (type == 0b01) {
+        res = val >> inc;
+    }
+    // asr shift
+    else if (type == 0b10) {
+        res = val >> inc;
+        if ((val >> maskVal) & 0b1) {
+            res += getMask(maskVal - (inc - 1), maskVal);
+        }
+    }
+    // ror shift
+    else {
+        res = val >> inc;
+        res += (val & getMask(0, inc - 1)) << (maskVal - (inc - 1));
+    }
+    printf("result: %lx\n", res);
+    if (sf) {
+        return res;
+    } else {
+        return (uint32_t) res;
+    }
+    // return res;
+}
+
+static bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool negate) {
+    if (negate) {
+        op = ~op;
+    }
+    switch (opc) {
+        case 0b00: // Bitwise M
+            writeRegister(sf, rd, rn & op);
+            break;
+        case 0b01:
+            writeRegister(sf, rd, rn | op);
+            break;
+        case 0b10:
+            writeRegister(sf, rd, rn ^ op);
+            break;
+        case 0b11:
+            writeRegister(sf, rd, rn & op);
+            CPU.PSTATE.Negative = (rn & op) >> (32 + (32 * sf) - 1);
+            CPU.PSTATE.Zero = (rn & op) == 0;
+            CPU.PSTATE.Carry = 0;
+            CPU.PSTATE.Overflow = 0;
+            break;
+        default:
+            return false;
+    }
+    return true;
+}
+
+// multiplyInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+static bool multiplyInstruction(u_int splitWord[]){
+    u_int sf = splitWord[0];
+
+    int64_t rn = readRegister(sf, splitWord[8]);
+    int64_t rm = readRegister(sf, splitWord[6]);
+
+    bool x = splitWord[7] >> 5;
+    int64_t ra = readRegister(sf, splitWord[7] & 0b11111);
+    int64_t mul = rn * rm;
+    // printf("x: %d, operand: %u\n", x, splitWord[7]);
+    if (x) {
+        writeRegister(sf, splitWord[9], ra - mul);
+    } else {
+        writeRegister(sf, splitWord[9], ra + mul);
+    }
+    return true;
+}
+
+// logicalShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+static bool logicalShiftInstruction(u_int splitWord[]) {
+    u_int opc = splitWord[1];
+    u_int shiftMask = (splitWord[5] >> 1) & 0b11;
+    u_int negate = splitWord[5] & 0x1;
+    u_int sf = splitWord[0];
+    u_int64_t firstOp = splitWord[7];
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+
+    if (!sf) {
+        firstOp &= ((uint64_t) 2 << 32) - 1;
+    }
+
+    u_int64_t secOp = shift(rm, firstOp, shiftMask, sf);
+
+    registerParser(opc, splitWord[9], rn, secOp, sf, negate);
+
+    return true;
+}
+
+// arithmeticShiftInstruction is a function taking the split instruction (word) as argument
+// It completed the instruction on the CPU
+// It returns true on a successful execution, false otherwise
+static bool arithmeticShiftInstruction(u_int splitWord[]){
+    u_int shiftMask = (splitWord[5] >> 1) & 0b11;
+    u_int sf = splitWord[0];
+    u_int64_t firstOp = splitWord[7];
+    u_int64_t rn = readRegister(sf, splitWord[8]);
+    u_int64_t rm = readRegister(sf, splitWord[6]);
+    uint64_t op2 = shift(rm, firstOp, shiftMask, sf);
+
+    processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[9]);
+
+    return true;
+}
+
+bool decodeDataImmediate(uint32_t word) {
+    printf("Entering Data processing (immediate) group with word: %u\n" ,word);
+    // Decode to: sf, opc, 100, opi, operand, rd
+    u_int32_t splitInstruction[] = {
+            word >> 31,
+            0b11 & (word >> 29),
+            0b111 & (word >> 26),
+            0b111 & (word >> 23),
+            ((2 << 17) - 1) & (word >> 5),
+            0b11111 & word
+    };
+    assert(splitInstruction[2] == 4);
+
+    //Switch on opi
+    switch (splitInstruction[3]){
+        // opi is 010, then the instruction is an arithmetic instruction
+        case (0b010): {
+            arithmeticInstruction(splitInstruction);
+            break;
+        }
+            // opi is 101, then the instruction is a wide move
+        case (5): {
+            wideMoveInstruction(splitInstruction);
+            break;
+        }
+            // no matching instruction throws error code 5
+        default: {
+            // TODO( Use the variable being switched on instead of recalculating)
+            printf("No data processing (immediate) instruction matching opi value: %d\n", splitInstruction[3]);
+            return false;
+        }
+    }
+    incrementPC();
+    return true;
+}
+
+bool decodeDataRegister(uint32_t word) {
+    printf("Entering Data processing (register) group with word: %u\n" ,word);
+    // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
+    u_int32_t splitInstruction[] = {
+            word >> 31,
+            0b11 & (word >> 29),
+            0b1 & (word >> 28),
+            0b11 & (word >> 26),
+            0b1 & (word >> 25),
+            0b1111 & (word >> 21),
+            0b11111 & (word >> 16),
+            ((1 << 6) - 1) & (word >> 10),
+            0b11111 & (word >> 5),
+            0b11111 & word
+    };
+    assert(splitInstruction[3] == 2);
+    assert(splitInstruction[4] == 1);
+
+    if (splitInstruction[2] == 1 && splitInstruction[5] == 8) {
+        multiplyInstruction(splitInstruction);
+    }
+    else if (splitInstruction[2] == 0) {
+        if ((splitInstruction[5] >> 3) == 0) {
+            logicalShiftInstruction(splitInstruction);
+        }
+        else if ((9 & splitInstruction[5]) == 8) {
+            arithmeticShiftInstruction(splitInstruction);
+        }
+            // no matching instruction throws error code 6
+        else {
+            printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
+            return false;
+        }
+    }
+        // no matching instruction throws error code 6
+    else {
+        // TODO( Use the variable being switched on instead of recalculating)
+        printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
+        return false;
+    }
+    incrementPC();
+    return true;
+}
