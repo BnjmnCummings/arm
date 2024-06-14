@@ -1,8 +1,5 @@
 #include "filewriter.h"
+#include "util.h"
 
-void intDirective( int32_t word ) {
-    //should be little endian
-
-    //
-}
+void intDirective( int32_t word ) { writeInstruction(word); }
 

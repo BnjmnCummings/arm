@@ -1,4 +1,5 @@
 #include "filewriter.h"
+#include "util.h"
 
 static FILE *out;
 
@@ -10,8 +11,13 @@ void initFileWriter(char *filename) {
     }
 }
 
-void writeInstruction(const void *ptr) {
-    fwrite(ptr, INSTR_SIZE,  1, out);
+void writeInstruction(int32_t word) {
+//    printf("word passed in: ");
+//    printBits(word, 32);
+//    int32_t le_word = toLittleEndian(word);
+//    printf("word in little endian: ");
+//    printBits(le_word, 32);
+    fwrite(&word, INSTR_SIZE,  1, out);
     if( ferror(out) ) {
         fprintf( stderr, "Error occurred writing to file\n");
         exit(1);

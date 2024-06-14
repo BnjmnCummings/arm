@@ -8,7 +8,7 @@
 //initialises the output stream as given by cli arguments
 extern void initFileWriter(char *);
 //invokes fwrite with apporopriate arguments
-extern void writeInstruction(const void *);
+extern void writeInstruction(int32_t word);
 // size_t fwrite( const void *ptr, size_t size, size_t nmemb, FILE *stream );
 extern void wclose();
 
