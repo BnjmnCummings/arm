@@ -18,4 +18,7 @@ typedef struct {
 
 typedef char token[TOKEN_SIZE];
 
+tokenized_line *tokenize(char *);
+void free_tokenized(tokenized_line *);
+
 #endif //ARMV8_31_TOKENIZER_H
