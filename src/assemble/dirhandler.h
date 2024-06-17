@@ -1,4 +1,10 @@
 #ifndef ARMV8_31_ASS_DIRHANDLER_H
 #define ARMV8_31_ASS_DIRHANDLER_H
-    //code
-#endif //ARMV8_31_ASS_DIRHANDLER_H
+
+#include <stdio.h>
+#include <stdint.h>
+
+//prints an immediate binary representation to the file
+extern void intDirective( int32_t word );
+
+#endif //ARMV8_31_ASS_DIRHANDLER_Hs
