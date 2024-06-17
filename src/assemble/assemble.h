@@ -7,5 +7,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdint.h>
 
 #endif //ARMV8_31_ASSEMBLE_H
