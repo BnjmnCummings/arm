@@ -1,15 +1,116 @@
 #include "binbuilder.h"
 
-uint32_t load_literal(char *rt, char *literal) {
-    return 0;
+static uint32_t load_literal(char *rt, char *literal) {
+    uint32_t result = 0;
+    result += (rt[0] == 'x') << 30;  // adds sf bit
+    result += reg_to_bin(rt); // adds rt bits
+    result += calc_num(true, 19, literal) << 5; // adds simm19
+    result += 0b11 << 27;  // adds extra bits
+
+    return result;
 }
 
-uint32_t imm_data(char *inst, char **args) {
-    return 0;
+static uint32_t multiply(char *inst, char *rd, char *rn, char *rm, char *ra) {
+    uint32_t result = 0;
+    result += (rd[0] == 'x') << 31; // adds sf bit
+    result += reg_to_bin(rd);  // adds rd bits
+    result += reg_to_bin(rn) << 5;  // adds rn bits
+    result += reg_to_bin(rm) << 16;  // adds rm bits
+    result += reg_to_bin(ra) << 10;  // adds ra bits
+    result += strcmp(inst, "madd") << 15; // adds x bit
+    result += 0b11011 << 24;  // adds extra bits
+    return result;
 }
 
-uint32_t reg_data(char *inst, char **args) {
-    return 0;
+static uint32_t immediate_arith(uint32_t isSub, bool flags, char *rd, char *rn, bool shift, char *num) {
+    uint32_t result = 0;
+    result += reg_to_bin(rd);  // adds rd bits
+    result += reg_to_bin(rn) << 5;  // adds rn bits
+    result += calc_num(false, 12, num) << 10; // adds imm12 bits
+    result += shift << 22;  // adds sh bit
+    result += 0b100010 << 23;  // adds opi and extra bits
+    result += (isSub << 1) + shift;  // adds opc bits
+    result += (rd[0] == 'x') << 31;  // adds sf bit
+    return result;
+}
+
+static uint32_t reg_data(char *inst, char *rd, char *rn, char *rm, char *shift, bool flags) {
+    uint32_t operand = 0;
+    uint32_t opr;
+    uint32_t opc = 0;
+
+    if (strcmp(inst, "bic") == 0) {
+        opc = 0b00;
+        opr += 1   ;
+    } else if (strcmp(inst, "orr") == 0) {
+        opc = 0b01;
+    } else if (strcmp(inst, "orn") == 0) {
+        opc = 0b01;
+        opr += 1;
+    } else if (strcmp(inst, "eor") == 0) {
+        opc = 0b10;
+    } else {
+        // eon
+        opc = 0b10;
+        opr += 1;
+    }
+    opc += 0b11 * flags;
+
+    uint32_t result = 0;
+    result += reg_to_bin(rd);  // adds rd bits
+    result += reg_to_bin(rn) << 5;  // adds rn bits
+    result += reg_to_bin(rm) << 16;  // adds rm bits
+    result += operand << 10;
+    result += opr << 21;
+    result += 0b101 << 25;
+    result += opc << 29;
+    result += (rd[0] == 'x') << 31;
+    return result;
+}
+
+uint32_t data_process(char *inst, char **args, int addr) {
+    bool flags = false;
+    if (inst[strlen(inst) - 1] == 's') {
+        inst[strlen(inst) - 1] = '\0';
+        flags = true;
+    }
+
+    int num_args = sizeof(args)/sizeof(args[0]);
+    char shift[10] = "";
+    if (args[num_args - 1][3] == ' ') {
+        strcpy(shift, args[num_args - 1]);
+        num_args--;
+    }
+
+    switch (num_args)
+    {
+    case 2:
+       // single op w dest, or 2 op no dest
+
+        break;
+    case 3:
+        // two operand
+        if (args[2][0] == '#') {
+            // add/sub imm
+            bool isSub = strcmp(inst, "sub") == 0;
+            bool isShift = (shift[3] != ' ') && (strcmp(shift, "") != 0);
+            return immediate_arith(isSub, flags, args[0], args[1], isShift, args[2]);
+        } else if (strcmp(inst, "mul") == 0) {
+            // mul
+            return multiply("madd", args[0], args[1], args[2], "rzr");
+        } else if (strcmp(inst, "mneg") == 0) {
+            // mneg
+            return multiply("msub", args[0], args[1], args[2], "rzr");
+        } else {
+            // data processing (register)
+            return reg_data(inst, args[0], args[1], args[2], shift, flags);
+        }
+    case 4:
+        // multiply
+        return multiply(inst, args[0], args[1], args[2], args[3]);
+    default:
+        break;
+    }
 }
 
 uint32_t load_store(char *inst, char **args, int addr) {
@@ -17,12 +118,13 @@ uint32_t load_store(char *inst, char **args, int addr) {
         return load_literal(args[0], args[1]);
     }
 
-    bool sf = args[0][0] == 'X';
+    bool sf = args[0][0] == 'x';
     uint32_t result = 0; // to return
     result += sf << 30;  // adds sf bit
     result += reg_to_bin(args[0]); // adds rt bits
     result += (strcmp(inst, "ldr") == 0) << 22; // adds L bit
     result += calc_offset(addr, strip_address(args[1])) << 5; // adds xn bits
+    result += 0b10111 << 27;  // adds extra bits
     uint32_t offset = 0;
     bool u;
 
@@ -33,7 +135,7 @@ uint32_t load_store(char *inst, char **args, int addr) {
         // pre-indexed
         u = false;
         offset += 0b11;
-        offset += strip_num(args[2]);
+        offset += calc_num(true, 9, args[2]);
     } else if (args[2][0] != '#') {
         // register offset
         u = false;
@@ -43,12 +145,12 @@ uint32_t load_store(char *inst, char **args, int addr) {
     } else if (args[2][strlen(args[2]) - 1] == ']') {
         // unsigned offset
         u = true;
-        offset = strip_num(args[2]) / (4 + (4 * sf));
+        offset = calc_num(false, 12, args[2]) / (4 + (4 * sf));
     } else {
         // post-indexed
         u = false;
         offset += 0b01;
-        offset += strip_num(args[2]);
+        offset += calc_cum(true, 9, args[2]);
     }
 
     result += offset << 10;
@@ -57,6 +159,47 @@ uint32_t load_store(char *inst, char **args, int addr) {
     return result;
 }
 
-uint32_t branch(char *inst, char **args) {
-    return 0;
+uint32_t unc_branch(char *inst, char **args, int addr) {
+    uint32_t result = 0;
+    result += 0b101 << 26;  // adds extra bits
+    result += calc_offset(addr, calc_num(true, 26, args[0])); // adds simm26
+    return result;
+}
+
+uint32_t reg_branch(char *inst, char **args, int addr) {
+    uint32_t result = 0;
+    result += 0b1101011000011111 << 16; // adds extra bits
+    result += calc_offset(addr, strip_address(args[0])) << 5;
+}
+
+uint32_t con_branch(char *inst, char **args, int addr) {
+    char condition[2];
+    strcpy(condition, inst + 2);
+    
+    uint32_t result = 0;
+    result += 0b10101 << 26;  // adds extra bits
+    result += calc_num(true, 19, args[0]) << 5;  // adds simm19
+    uint32_t cond;
+
+    if (strcmp(condition, "eq") == 0) {
+        cond = 0b0000;
+    } else if (strcmp(condition, "ne") == 0) {
+        cond = 0b0001;
+    } else if (strcmp(condition, "ge") == 0) {
+        cond = 0b1010;
+    } else if (strcmp(condition, "lt") == 0) {
+        cond = 0b1011;
+    } else if (strcmp(condition, "gt") == 0) {
+        cond = 0b1100;
+    } else if (strcmp(condition, "le") == 0) {
+        cond = 0b1101;
+    } else {
+        cond = 0b1110;
+    }
+    result += cond;  // adds cond
+    return result;
+}
+
+uint32_t dot_int(char *inst, char **args, int addr) {
+    return calc_num(true, 32, args[0]);
 }
