@@ -22,9 +22,22 @@ void printBits( uint32_t x, int nbits ) {
 }
 
 uint32_t reg_to_bin(char *reg) {
-    return 0;
+    return strtol(reg + 1, NULL, 10)
 }
 
 uint32_t calc_num(bool signd, int num_bits, char *numstr) {
-    return 0;
+    int num;
+    if (strncmp(numstr, "#0x", 3)) {
+        num = strtol(numstr + 1, NULL, 16);
+    } else {
+        num = strtol(numstr + 1, NULL, 10);
+    }
+
+    if (!signd || num >= 0) {
+        return num;
+    } else {
+        uint32_t snum = num;
+        snum &= (2 << num_bits) - 1;
+        return snum;
+    }
 }
