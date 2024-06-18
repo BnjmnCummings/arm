@@ -10,5 +10,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include "util.h"
 
 #endif //ARMV8_31_ASSEMBLE_H

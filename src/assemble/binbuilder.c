@@ -1,10 +1,10 @@
 #include "binbuilder.h"
 
-static uint32_t load_literal(char *rt, char *literal) {
+static uint32_t load_literal(char *rt, char *literal, int addr) {
     uint32_t result = 0;
     result += (rt[0] == 'x') << 30;  // adds sf bit
     result += reg_to_bin(rt); // adds rt bits
-    result += calc_num(true, 19, literal) << 5; // adds simm19
+    result += (calc_num(true, 19, literal) - addr) << 5; // adds simm19
     result += 0b11 << 27;  // adds extra bits
 
     return result;
@@ -29,14 +29,39 @@ static uint32_t immediate_arith(uint32_t isSub, bool flags, char *rd, char *rn, 
     result += calc_num(false, 12, num) << 10; // adds imm12 bits
     result += shift << 22;  // adds sh bit
     result += 0b100010 << 23;  // adds opi and extra bits
-    result += (isSub << 1) + shift;  // adds opc bits
+    result += ((isSub << 1) + flags) << 29;  // adds opc bits
     result += (rd[0] == 'x') << 31;  // adds sf bit
     return result;
 }
 
-static uint32_t reg_data(char *inst, char *rd, char *rn, char *rm, char *shift, bool flags) {
+static uint32_t reg_arith(char *inst, char *rd, char *rn, char *rm, char *shift, bool flags) {
+    uint32_t opr = 0b1000;
     uint32_t operand = 0;
-    uint32_t opr;
+
+    if (strncmp(shift, "lsr", sizeof(char)) == 0) {
+        operand = calc_num(false, 6, shift + 4);
+        if (strncmp(shift, "lsr", 3 * sizeof(char)) == 0) {
+            opr += 0b100;
+        } else if (strncmp(shift, "asr", 3 * sizeof(char)) == 0) {
+            opr += 0b10;
+        }
+    }
+
+        uint32_t result = 0;
+    result += reg_to_bin(rd);  // adds rd bits
+    result += reg_to_bin(rn) << 5;  // adds rn bits
+    result += reg_to_bin(rm) << 16;
+    result += operand << 10;
+    result += opr << 21;
+    result += 0b101 << 25;  // adds extra bits
+    result += (((strcmp(inst, "sub") == 0) << 1) + flags) << 29;  // adds opc bits
+    result += (rd[0] == 'x') << 31;  // adds sf bit
+    return result;
+}
+
+static uint32_t reg_logic(char *inst, char *rd, char *rn, char *rm, char *shift, bool flags) {
+    uint32_t operand = 0;
+    uint32_t opr = 0;
     uint32_t opc = 0;
 
     if (strcmp(inst, "bic") == 0) {
@@ -49,12 +74,22 @@ static uint32_t reg_data(char *inst, char *rd, char *rn, char *rm, char *shift, 
         opr += 1;
     } else if (strcmp(inst, "eor") == 0) {
         opc = 0b10;
-    } else {
-        // eon
+    } else if (strcmp(inst, "eon") == 0) {
         opc = 0b10;
         opr += 1;
     }
     opc += 0b11 * flags;
+
+    if (strncmp(shift, "lsr", sizeof(char)) == 0) {
+        operand = calc_num(false, 6, shift + 4);
+        if (strncmp(shift, "lsr", 3 * sizeof(char)) == 0) {
+            opr += 0b100;
+        } else if (strncmp(shift, "asr", 3 * sizeof(char)) == 0) {
+            opr += 0b10;
+        } else if (strncmp(shift, "lsr", 3 * sizeof(char)) == 0) {
+            opr += 0b110;
+        }
+    }
 
     uint32_t result = 0;
     result += reg_to_bin(rd);  // adds rd bits
@@ -63,6 +98,31 @@ static uint32_t reg_data(char *inst, char *rd, char *rn, char *rm, char *shift, 
     result += operand << 10;
     result += opr << 21;
     result += 0b101 << 25;
+    result += opc << 29;
+    result += (rd[0] == 'x') << 31;
+    return result;
+}
+
+static uint32_t wide_move(char *inst, char *rd, char *shift, char *numstr) {
+    uint32_t opc = 0;
+    uint32_t hw = 0;
+
+    if (strcmp(shift, "") != 0) {
+        hw = calc_num(false, 64, shift + 4) / 16;
+    }
+    if (strcmp(inst, "movk") == 0) {
+        opc = 0;
+    } else if (strcmp(inst, "movn") == 0) {
+        opc = 0b10;
+    } else if (strcmp(inst, "movz") == 0) {
+        opc = 0b11;
+    }
+
+    uint32_t result = 0;
+    result += reg_to_bin(rd);
+    result += calc_num(false, 16, numstr) << 5;
+    result += hw << 21;
+    result += 0b100101 << 23;
     result += opc << 29;
     result += (rd[0] == 'x') << 31;
     return result;
@@ -85,10 +145,22 @@ uint32_t data_process(char *inst, char **args, int addr) {
     switch (num_args)
     {
     case 2:
-       // single op w dest, or 2 op no dest
-
-        break;
-    case 3:
+        if (strcmp(inst, "cmp") == 0) {
+            return immediate_arith(1, true, "rzr", args[0], (strcmp(shift, "") != 0), args[1]);
+        } else if (strcmp(inst, "cmn") == 0) {
+            return immediate_arith(0, true, "rzr", args[0], (strcmp(shift, "") != 0), args[1]);
+        } else if (strcmp(inst, "neg") == 0) {
+            return immediate_arith(1, flags, args[0], "rzr", (strcmp(shift, "") != 0), args[1]);
+        } else if (strcmp(inst, "tst") == 0) {
+            return reg_logic("and", "rzr", args[0], args[1], shift, true);
+        } else if (strcmp(inst, "mvn") == 0) {
+            return reg_logic("orn", args[0], "rzr", args[1], shift, false);
+        } else if (strcmp(inst, "mov") == 0) {
+            return reg_logic("orr", args[0], "rzr", args[1], "", false);
+        } else {
+            return wide_move(inst, args[0], shift, args[1]);
+        }
+        case 3:
         // two operand
         if (args[2][0] == '#') {
             // add/sub imm
@@ -101,21 +173,24 @@ uint32_t data_process(char *inst, char **args, int addr) {
         } else if (strcmp(inst, "mneg") == 0) {
             // mneg
             return multiply("msub", args[0], args[1], args[2], "rzr");
+        } else if (strcmp(inst, "add") == 0 || strcmp(inst, "sub") == 0) {
+            // register arithmetic
+            return reg_arith(inst, args[0], args[1], args[2], shift, flags);
         } else {
-            // data processing (register)
-            return reg_data(inst, args[0], args[1], args[2], shift, flags);
+            // register logical
+            return reg_logic(inst, args[0], args[1], args[2], shift, flags);
         }
     case 4:
         // multiply
         return multiply(inst, args[0], args[1], args[2], args[3]);
     default:
-        break;
+        return 0;
     }
 }
 
 uint32_t load_store(char *inst, char **args, int addr) {
     if (args[1][0] != '[') {
-        return load_literal(args[0], args[1]);
+        return load_literal(args[0], args[1], addr);
     }
 
     bool sf = args[0][0] == 'x';
@@ -123,7 +198,7 @@ uint32_t load_store(char *inst, char **args, int addr) {
     result += sf << 30;  // adds sf bit
     result += reg_to_bin(args[0]); // adds rt bits
     result += (strcmp(inst, "ldr") == 0) << 22; // adds L bit
-    result += calc_offset(addr, strip_address(args[1])) << 5; // adds xn bits
+    result += reg_to_bin(args[1] + 1) << 5; // adds xn bits
     result += 0b10111 << 27;  // adds extra bits
     uint32_t offset = 0;
     bool u;
@@ -150,7 +225,7 @@ uint32_t load_store(char *inst, char **args, int addr) {
         // post-indexed
         u = false;
         offset += 0b01;
-        offset += calc_cum(true, 9, args[2]);
+        offset += calc_num(true, 9, args[2]);
     }
 
     result += offset << 10;
@@ -162,14 +237,15 @@ uint32_t load_store(char *inst, char **args, int addr) {
 uint32_t unc_branch(char *inst, char **args, int addr) {
     uint32_t result = 0;
     result += 0b101 << 26;  // adds extra bits
-    result += calc_offset(addr, calc_num(true, 26, args[0])); // adds simm26
+    result += calc_num(true, 26, args[0]) - addr; // adds simm26
     return result;
 }
 
 uint32_t reg_branch(char *inst, char **args, int addr) {
     uint32_t result = 0;
     result += 0b1101011000011111 << 16; // adds extra bits
-    result += calc_offset(addr, strip_address(args[0])) << 5;
+    result += reg_to_bin(args[0]) << 5;
+    return result;
 }
 
 uint32_t con_branch(char *inst, char **args, int addr) {
@@ -178,7 +254,7 @@ uint32_t con_branch(char *inst, char **args, int addr) {
     
     uint32_t result = 0;
     result += 0b10101 << 26;  // adds extra bits
-    result += calc_num(true, 19, args[0]) << 5;  // adds simm19
+    result += (calc_num(true, 19, args[0]) - addr) << 5;  // adds simm19
     uint32_t cond;
 
     if (strcmp(condition, "eq") == 0) {
