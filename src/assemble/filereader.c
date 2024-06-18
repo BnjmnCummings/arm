@@ -31,7 +31,7 @@ void read_symbol(char *buffer, int *addr) {
 
 void read_line(char *buffer, int *addr) {
     if (!isLabel(buffer) && buffer[0] != '\0') {
-        parse_line(buffer);
+        parse_line(buffer, *addr);
         INC(*addr);
     }
 }
