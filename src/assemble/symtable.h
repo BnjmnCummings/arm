@@ -2,7 +2,7 @@
 #define ARMV8_31_ASS_SYMTABLE_H
 #include <stdlib.h>
 #include <string.h>
-#include "parser.h"
+#include "assemble.h"
 
 #define INITIALCAP 10
 #define MAXSYMLEN 512
