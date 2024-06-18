@@ -22,7 +22,7 @@ void printBits( uint32_t x, int nbits ) {
 }
 
 uint32_t reg_to_bin(char *reg) {
-    return strtol(reg + 1, NULL, 10)
+    return strtol(reg + 1, NULL, 10);
 }
 
 uint32_t calc_num(bool signd, int num_bits, char *numstr) {

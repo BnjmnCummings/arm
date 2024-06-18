@@ -1,6 +1,7 @@
 #include "assemble.h"
 #include "filewriter.h"
 #include "filereader.h"
+#include "symtable.h"
 
 int main(int argc, char **argv) {
   

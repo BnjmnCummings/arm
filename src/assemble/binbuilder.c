@@ -1,4 +1,5 @@
 #include "binbuilder.h"
+#include "util.h"
 
 static uint32_t load_literal(char *rt, char *literal, int addr) {
     uint32_t result = 0;

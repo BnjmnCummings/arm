@@ -1,4 +1,6 @@
 #include "parser.h"
+#include "tokenizer.h"
+#include "funtable.h"
 
 void parse_line(char *line, int addr) {
     printf("got to parse line for %s\n", line);
