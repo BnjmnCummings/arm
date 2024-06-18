@@ -13,7 +13,7 @@ tokenized_line *tokenize(char *line) {
     }
 
     // store the instruction type
-    char *token = strtok(line, " ,");
+    char *token = strtok(line, " ");
     if (token == NULL) {
         free(tokenized->token_list);
         free(tokenized);
@@ -23,7 +23,7 @@ tokenized_line *tokenize(char *line) {
 
     // tokenize the tokens
     int i = 0;
-    while (i < MAX_TOKENS && (token = strtok(NULL, " ,")) != NULL) {
+    while (i < MAX_TOKENS && (token = strtok(NULL, ", ")) != NULL) {
         strcpy(tokenized->token_list[i], token);
         i++;
     }
