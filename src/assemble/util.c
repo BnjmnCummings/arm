@@ -20,3 +20,11 @@ void printBits( uint32_t x, int nbits ) {
   }
   putchar('\n');
 }
+
+uint32_t reg_to_bin(char *reg) {
+    return 0;
+}
+
+uint32_t calc_num(bool signd, int num_bits, char *numstr) {
+    return 0;
+}
