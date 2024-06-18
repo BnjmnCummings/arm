@@ -1,5 +1,4 @@
 #include "parser.h"
-#include <stdlib.h>
 
 void parse_line(char *line, int addr) {
     printf("got to parse line for %s\n", line);
@@ -10,7 +9,7 @@ void parse_line(char *line, int addr) {
     //replace lables with address (int) as a string with # char before it
     for(int i = 0; i<MAX_TOKENS; i++) { //TODO: alter the tokenizer.c to get the number of tokens
         int labelAddress = get_address(tline->token_list[i]);
-        if(labelAddress != -1) {
+        if(labelAddress != SYMBOL_NOTFOUND) {
             token buffer;
             sprintf(buffer, "#%d", labelAddress);
             strcpy(tline->token_list[i], buffer);

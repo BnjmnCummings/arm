@@ -1,6 +1,8 @@
 #ifndef ARMV8_31_FUNTABLE_H
 #define ARMV8_31_FUNTABLE_H
+
 #include "assemble.h"
+#include "binbuilder.h"
 #define NUM_FUNCTIONS 38
 
 typedef uint32_t (*fun_pointer)(char *, char **, int) ;

@@ -1,6 +1,5 @@
 #include "filereader.h"
-#include "parser.h"
-#include "symtable.h"
+
 
 static FILE *in;
 
@@ -14,7 +13,7 @@ void initFileReader(char * filename) {
     in = fopen(filename, "r");
     if(in == NULL) {
         fprintf( stderr, "Error: can’t open %s\n", filename );
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 }
 

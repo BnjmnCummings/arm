@@ -1,10 +1,6 @@
 #ifndef ARMV8_31_ASS_FILEREADER_H
 #define ARMV8_31_ASS_FILEREADER_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <stdbool.h>
 #include "assemble.h"
 #include "parser.h"
 #include "symtable.h"

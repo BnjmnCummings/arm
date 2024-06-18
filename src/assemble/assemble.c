@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   //validate all arguments have been given
   if(argc != 3) {
     fprintf( stderr, "Error: invalid arguments!, \n" );
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   //initialise input and output files
   initFileReader(argv[1]);

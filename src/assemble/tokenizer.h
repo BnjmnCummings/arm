@@ -1,12 +1,7 @@
-//
-// Created by Bruce Chen on 6/14/24.
-//
-
 #ifndef ARMV8_31_TOKENIZER_H
 #define ARMV8_31_TOKENIZER_H
-#include "symtable.h"
-#include <string.h>
-#include <stdlib.h>
+
+#include "assemble.h"
 
 #define TOKEN_SIZE 100 // set size to max token size
 #define MAX_TOKENS 5

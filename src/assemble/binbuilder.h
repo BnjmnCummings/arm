@@ -5,6 +5,7 @@
 #ifndef ARMV8_31_BINBUILDER_H
 #define ARMV8_31_BINBUILDER_H
 #include "assemble.h"
+#include "util.h"
 
 uint32_t data_process(char *inst, char **args, int addr);
 uint32_t load_store(char *inst, char **args, int addr);

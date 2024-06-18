@@ -21,18 +21,18 @@ void store_symbol(char *label, int addr) {
 void init_table(void) {
     table = (symtable *) malloc(sizeof(symtable));
     table->nitems = 0;
-    table->capacity = INITIALCAP;
-    table->addr = malloc(INITIALCAP * sizeof(int));
-    table->lb = malloc(INITIALCAP * sizeof(label));
+    table->capacity = INITIAL_CAP;
+    table->addr = malloc(INITIAL_CAP * sizeof(int));
+    table->lb = malloc(INITIAL_CAP * sizeof(label));
 }
 
 int get_address(char *label) {
     for (int i = 0; i < table->nitems; i++) {
-        if (strncmp(table->lb[i], label, MAXSYMLEN) == 0) {
+        if (strcmp(table->lb[i], label) == 0) {
             return table->addr[i];
         }
     }
-    return -1;
+    return SYMBOL_NOTFOUND;
 }
 
 void free_table(void) {

@@ -1,8 +1,7 @@
 #ifndef ARMV8_31_ASS_FILE_WRITER_H
 #define ARMV8_31_ASS_FILE_WRITER_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "assemble.h"
 #define INSTR_SIZE 4 // 4 bytes
 
 //initialises the output stream as given by cli arguments

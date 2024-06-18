@@ -1,5 +1,5 @@
 #include "funtable.h"
-#include "assemble.h"
+
 
 static const ftable_t ftable = {
         {"add",  &data_process},

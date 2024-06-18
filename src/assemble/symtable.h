@@ -1,13 +1,13 @@
 #ifndef ARMV8_31_ASS_SYMTABLE_H
 #define ARMV8_31_ASS_SYMTABLE_H
-#include <stdlib.h>
-#include <string.h>
+
 #include "assemble.h"
 
-#define INITIALCAP 10
-#define MAXSYMLEN 512
+#define INITIAL_CAP 10
+#define MAX_SYMLEN 512
+#define SYMBOL_NOTFOUND -1
 
-typedef char label[MAXSYMLEN];
+typedef char label[MAX_SYMLEN];
 
 typedef struct {
     int nitems;
