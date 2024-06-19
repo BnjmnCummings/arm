@@ -15,9 +15,7 @@ typedef struct {
     int ntokens;
 } tokenized_line;
 
-
-
-tokenized_line *tokenize(char *);
-void free_tokenized(tokenized_line *);
+extern tokenized_line *tokenize(char *);
+extern void free_tokenized(tokenized_line *);
 
 #endif //ARMV8_31_TOKENIZER_H

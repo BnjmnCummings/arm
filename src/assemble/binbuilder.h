@@ -8,11 +8,11 @@
 #include "util.h"
 #include "tokenizer.h"
 
-uint32_t data_process(tokenized_line line, int addr);
-uint32_t load_store(tokenized_line line, int addr);
-uint32_t unc_branch(tokenized_line line, int addr);
-uint32_t reg_branch(tokenized_line line, int addr);
-uint32_t con_branch(tokenized_line lines, int addr);
-uint32_t dot_int(tokenized_line line, int addr);
+extern uint32_t data_process(tokenized_line line, int addr);
+extern uint32_t load_store(tokenized_line line, int addr);
+extern uint32_t unc_branch(tokenized_line line, int addr);
+extern uint32_t reg_branch(tokenized_line line, int addr);
+extern uint32_t con_branch(tokenized_line lines, int addr);
+extern uint32_t dot_int(tokenized_line line, int addr);
 
 #endif //ARMV8_31_BINBUILDER_H
