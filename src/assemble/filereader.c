@@ -55,6 +55,7 @@ void read_file(void (*read_func)(char *, int *)) {
     rewind(in);
 }
 
+//invokes 'fclose()' on read-file pointer
 void r_close() {
     fclose(in);
 }

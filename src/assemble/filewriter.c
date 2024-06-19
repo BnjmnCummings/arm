@@ -2,6 +2,7 @@
 
 static FILE *out;
 
+//initialises the output stream as given by cli arguments
 void init_file_writer(char *filename) {
     out = fopen(filename, "wb");
     if(out == NULL) {
@@ -10,6 +11,7 @@ void init_file_writer(char *filename) {
     }
 }
 
+//invokes 'fwrite()' with appropriate arguments
 void write_instruction(int32_t word) {
     fwrite(&word, INSTR_SIZE,  1, out);
     if( ferror(out) ) {
@@ -18,6 +20,7 @@ void write_instruction(int32_t word) {
     }
 }
 
+//invokes 'fclose()' on write-file pointer
 void w_close() {
     fclose(out);
 }

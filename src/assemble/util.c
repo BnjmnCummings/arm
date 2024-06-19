@@ -1,16 +1,5 @@
 #include "util.h"
 
-//used for testing purposes
-void print_bits( uint32_t x, int nbits ) {
-  uint32_t mask = 1 << (nbits-1);
-  for( int i=0; i<nbits; i++ ) {
-    int bit = (x & mask) != 0;
-    putchar( '0' + bit );
-    mask >>= 1;      
-  }
-  putchar('\n');
-}
-
 uint32_t reg_to_bin(char *reg) {
     if (strcmp(reg + 1, "zr") == 0) {
         return 0b11111;
@@ -19,15 +8,15 @@ uint32_t reg_to_bin(char *reg) {
     }
 }
 
-uint32_t calc_num(bool signd, int num_bits, char *numstr) {
+uint32_t calc_num(bool is_signed, int num_bits, char *num_literal) {
     int num;
-    if (strncmp(numstr, "0x", 2) == 0) {
-        num = strtol(numstr, NULL, 16);
+    if (strncmp(num_literal, "0x", 2) == 0) {
+        num = strtol(num_literal, NULL, 16);
     } else {
-        num = strtol(numstr, NULL, 10);
+        num = strtol(num_literal, NULL, 10);
     }
 
-    if (!signd || num >= 0) {
+    if (!is_signed || num >= 0) {
         return num;
     } else {
         uint32_t snum = num;
@@ -36,8 +25,8 @@ uint32_t calc_num(bool signd, int num_bits, char *numstr) {
     }
 }
 
-uint32_t calc_offset(bool signd, int num_bits, char *numstr, int addr) {
-    int32_t num = calc_num(signd, num_bits, numstr);
+uint32_t calc_offset(bool is_signed, int num_bits, char *num_literal, int addr) {
+    int32_t num = calc_num(is_signed, num_bits, num_literal);
     return ((uint32_t) (num - addr) / 4) & ((1 << num_bits) - 1);
 }
 
