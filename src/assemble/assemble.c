@@ -12,17 +12,19 @@ int main(int argc, char **argv) {
   }
 
   //initialise input and output files
-  initFileReader(argv[1]);
-  initFileWriter(argv[2]);
+  init_file_reader(argv[1]);
+  init_file_writer(argv[2]);
   init_table();
 
   //first pass
   read_file(&read_symbol);
+
   //second pass
   read_file(&read_line);
 
   //file closing
-  rclose();
-  wclose();
+  r_close();
+  w_close();
+
   return EXIT_SUCCESS;
 }

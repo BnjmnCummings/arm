@@ -6,8 +6,7 @@ static FILE *in;
 
 #define INC(addr) (addr += 4)
 
-static bool isLabel(char *line) {
-    // TODO(check edge cases, not following rules)
+static bool is_label(char *line) {
     if (line[strcspn(line, " ") - 1] == ':') {
         line[strcspn(line, " ")] = '\0';
         return true;
@@ -16,7 +15,7 @@ static bool isLabel(char *line) {
     }
 }
 
-void initFileReader(char * filename) {
+void init_file_reader(char * filename) {
     in = fopen(filename, "r");
     if(in == NULL) {
         fprintf( stderr, "Error: can't open %s\n", filename );
@@ -26,7 +25,7 @@ void initFileReader(char * filename) {
 
 void read_symbol(char *buffer, int *addr) {
     if (buffer[0] != '\0') {
-        if (isLabel(buffer)) {
+        if (is_label(buffer)) {
             buffer[strlen(buffer) - 1] = '\0';
             store_symbol(buffer, *addr);
         } else {
@@ -36,7 +35,7 @@ void read_symbol(char *buffer, int *addr) {
 }
 
 void read_line(char *buffer, int *addr) {
-    if (!isLabel(buffer) && buffer[0] != '\0') {
+    if (!is_label(buffer) && buffer[0] != '\0') {
         parse_line(buffer, *addr);
         INC(*addr);
     }
@@ -56,10 +55,6 @@ void read_file(void (*read_func)(char *, int *)) {
     rewind(in);
 }
 
-//void rewind_file(){
-//    rewind(in);
-//}
-
-void rclose() {
+void r_close() {
     fclose(in);
 }

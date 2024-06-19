@@ -18,5 +18,5 @@ void parse_line(char *line, int addr) {
 
     //invoke function from map and pass into filewriter
     uint32_t bin = (getFunction(tline->inst))(*tline, addr);
-    writeInstruction(bin);
+    write_instruction(bin);
 }

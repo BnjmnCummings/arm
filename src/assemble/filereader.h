@@ -11,7 +11,7 @@
 extern void read_symbol(char *, int *);
 extern void read_line(char *, int *);
 extern void read_file(void (*f)(char *, int *));
-extern void initFileReader(char *);
-extern void rclose();
+extern void init_file_reader(char *);
+extern void r_close();
 
 #endif //ARMV8_31_ASS_FILEREADER_H

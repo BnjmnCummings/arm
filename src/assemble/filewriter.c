@@ -2,7 +2,7 @@
 
 static FILE *out;
 
-void initFileWriter(char *filename) { 
+void init_file_writer(char *filename) {
     out = fopen(filename, "wb");
     if(out == NULL) {
         fprintf( stderr,"Error: can’t open %s\n", filename );
@@ -10,7 +10,7 @@ void initFileWriter(char *filename) {
     }
 }
 
-void writeInstruction(int32_t word) {
+void write_instruction(int32_t word) {
     fwrite(&word, INSTR_SIZE,  1, out);
     if( ferror(out) ) {
         fprintf( stderr, "Error occurred writing to file\n");
@@ -18,6 +18,6 @@ void writeInstruction(int32_t word) {
     }
 }
 
-void wclose() {
+void w_close() {
     fclose(out);
 }
