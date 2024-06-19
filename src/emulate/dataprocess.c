@@ -79,7 +79,7 @@ static void processArithmetic(uint64_t opc, uint64_t rn, uint64_t op2, bool sf, 
 // arithmeticInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool arithmeticInstruction(u_int32_t splitWord[]){
+static void arithmeticInstruction(u_int32_t splitWord[]){
     u_int32_t operand[] = {
         splitWord[4] >> 17,
         ((1 << 12) - 1) & (splitWord[4] >> 5),
@@ -91,14 +91,12 @@ static bool arithmeticInstruction(u_int32_t splitWord[]){
     }
     int64_t rn = readRegister(splitWord[0], operand[2]);
     processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[5]);
-
-    return true;
 }
 
 // wideMoveInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool wideMoveInstruction(u_int32_t splitWord[]){
+static void wideMoveInstruction(u_int32_t splitWord[]){
     uint64_t operand[] = {
         splitWord[4] >> 16,
         splitWord[4] & ((2 << 15) - 1)
@@ -127,7 +125,6 @@ static bool wideMoveInstruction(u_int32_t splitWord[]){
         break;
     }
     writeRegister(splitWord[0], splitWord[5], result);
-    return true;
 }
 
 static u_int64_t shift(uint64_t val, uint64_t inc, uint64_t type, bool sf) {
@@ -162,7 +159,7 @@ static u_int64_t shift(uint64_t val, uint64_t inc, uint64_t type, bool sf) {
     // return res;
 }
 
-static bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool negate) {
+static void registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf, bool negate) {
     if (negate) {
         op = ~op;
     }
@@ -184,15 +181,14 @@ static bool registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf,
             CPU.PSTATE.Overflow = 0;
             break;
         default:
-            return false;
+            break;
     }
-    return true;
 }
 
 // multiplyInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool multiplyInstruction(u_int splitWord[]){
+static void multiplyInstruction(u_int splitWord[]){
     u_int sf = splitWord[0];
 
     int64_t rn = readRegister(sf, splitWord[8]);
@@ -207,13 +203,12 @@ static bool multiplyInstruction(u_int splitWord[]){
     } else {
         writeRegister(sf, splitWord[9], ra + mul);
     }
-    return true;
 }
 
 // logicalShiftInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool logicalShiftInstruction(u_int splitWord[]) {
+static void logicalShiftInstruction(u_int splitWord[]) {
     u_int opc = splitWord[1];
     u_int shiftMask = (splitWord[5] >> 1) & 0b11;
     u_int negate = splitWord[5] & 0x1;
@@ -229,14 +224,12 @@ static bool logicalShiftInstruction(u_int splitWord[]) {
     u_int64_t secOp = shift(rm, firstOp, shiftMask, sf);
 
     registerParser(opc, splitWord[9], rn, secOp, sf, negate);
-
-    return true;
 }
 
 // arithmeticShiftInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool arithmeticShiftInstruction(u_int splitWord[]){
+static void arithmeticShiftInstruction(u_int splitWord[]){
     u_int shiftMask = (splitWord[5] >> 1) & 0b11;
     u_int sf = splitWord[0];
     u_int64_t firstOp = splitWord[7];
@@ -245,8 +238,6 @@ static bool arithmeticShiftInstruction(u_int splitWord[]){
     uint64_t op2 = shift(rm, firstOp, shiftMask, sf);
 
     processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[9]);
-
-    return true;
 }
 
 bool decodeDataImmediate(uint32_t word) {
@@ -321,7 +312,6 @@ bool decodeDataRegister(uint32_t word) {
     }
         // no matching instruction throws error code 6
     else {
-        // TODO( Use the variable being switched on instead of recalculating)
         printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
         return false;
     }

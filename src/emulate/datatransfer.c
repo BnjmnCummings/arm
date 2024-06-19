@@ -17,7 +17,7 @@ static void loadOrStore(bool ldOrSt, bool bitMode, uint32_t regNumb, uint32_t ad
 // loadLiteralInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool loadLiteralInstruction(u_int32_t splitWord[]){
+static void loadLiteralInstruction(u_int32_t splitWord[]){
     // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
     // Note this may need sign extended to 64 bit manually
     int64_t offset = ((int64_t) splitWord[5]) * 4;
@@ -25,20 +25,17 @@ static bool loadLiteralInstruction(u_int32_t splitWord[]){
     // find the target and source locations and check validity
     u_int32_t targetRegister = splitWord[6];
     assert((0 <= targetRegister) && (targetRegister <= 30));
-    // int64_t loadFromAddress = (int64_t) CPU.PC + offset;
     int64_t loadFromAddress =((((int64_t) ((int32_t) (offset << 13)))) >> 13) + (int64_t) CPU.PC;
     assert((0 <= loadFromAddress) && (loadFromAddress < MEMORYSIZE));
 
     // load the value into the target register and return true
     loadOrStore(1, splitWord[1], targetRegister, loadFromAddress);
-    // writeRegister(splitWord[1], targetRegister, readMemory(splitWord[1], loadFromAddress));
-    return true;
 }
 
 // singleDataTransferInstruction is a function taking the split instruction (word) as argument
 // It completed the instruction on the CPU
 // It returns true on a successful execution, false otherwise
-static bool singleDataTransferInstruction(const u_int32_t splitWord[]){
+static void singleDataTransferInstruction(const u_int32_t splitWord[]){
 // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
     u_int32_t operand = splitWord[5];
     bool registerMode = splitWord[1];
@@ -122,7 +119,6 @@ static bool singleDataTransferInstruction(const u_int32_t splitWord[]){
         }
         // in this situation a pattern must be matched so error message needed for nothing matching
     }
-    return true;
 }
 
 bool decodeDataTransfer(uint32_t word) {

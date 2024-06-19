@@ -5,7 +5,7 @@ extern processor CPU;
 // unconditionalBranch is a function taking the split instruction (word) as argument
 // It applies an offset to the current PC value
 // It returns true on a successful execution, false otherwise
-static bool unconditionalBranch(const u_int32_t splitWord[]){
+static void unconditionalBranch(const u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
     int64_t offset = splitWord[3] * 4;
@@ -16,13 +16,12 @@ static bool unconditionalBranch(const u_int32_t splitWord[]){
 
     // update the PC value and return true
     CPU.PC += offset;
-    return true;
 }
 
 // registerBranch is a function taking the split instruction (word) as argument
 // It changes the PC to a value specified in a specified register
 // It returns true on a successful execution, false otherwise
-static bool registerBranch(u_int32_t splitWord[]){
+static void registerBranch(u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // Note this may need sign extended to 64 bit manually
     u_int32_t registerNumb = 0b11111 & (splitWord[3] >> 5);
@@ -34,7 +33,6 @@ static bool registerBranch(u_int32_t splitWord[]){
 
     // update the PC value and return true
     CPU.PC = newPCAddressLocation;
-    return true;
 }
 
 // conditionalBranchConditionCheck is a function taking the condition on the branch as argument
@@ -69,7 +67,7 @@ static bool conditionalBranchConditionCheck(u_int32_t conditionCode){
 // conditionalBranch is a function taking the split instruction (word) as argument
 // It checks an encoded condition and if true, it applies an indicated offset to the PC
 // It returns true on a successful execution, false otherwise
-static bool conditionalBranch(const u_int32_t splitWord[]){
+static void conditionalBranch(const u_int32_t splitWord[]){
     // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     u_int32_t operand = splitWord[3];
 
@@ -97,8 +95,6 @@ static bool conditionalBranch(const u_int32_t splitWord[]){
     } else {
         CPU.PC += 4;
     }
-    // successful execution no matter the state of condition so return true
-    return true;
 }
 
 bool decodeBranch(uint32_t word) {
