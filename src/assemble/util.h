@@ -14,5 +14,7 @@ extern void printBits( uint32_t x, int nbits );
 extern int32_t toLittleEndian( int32_t word );
 extern uint32_t reg_to_bin(char *reg);
 extern uint32_t calc_num(bool signd, int num_bits, char *numstr);
+extern bool check_sf(char *r1, char *r2);
+extern uint32_t calc_offset(bool signd, int num_bits, char *numstr, int addr);
 
 #endif //ARMV8_31_ASS_UTIL_H
