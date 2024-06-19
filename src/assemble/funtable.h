@@ -12,6 +12,6 @@ typedef struct {
     fun_pointer function;
 } pair;
 
-extern fun_pointer getFunction(char *mnemonic);
+extern fun_pointer get_bin_function(char *mnemonic);
 
 #endif //ARMV8_31_FUNTABLE_H

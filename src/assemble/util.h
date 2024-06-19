@@ -1,6 +1,6 @@
 #ifndef ARMV8_31_ASS_UTIL_H
 #define ARMV8_31_ASS_UTIL_H
-//This is a utility file that was created to house a toLittleEndian function.
+//This is a utility file that was created to house a to_little_endian function.
 //add any useful functions which are reused project-wide
 #include "assemble.h"
 
@@ -10,8 +10,7 @@
 #define FOURTH_BYTE 0xFF000000
 #define BYTE_SIZE   8
 
-extern void printBits( uint32_t x, int nbits );
-extern int32_t toLittleEndian( int32_t word );
+extern void print_bits( uint32_t x, int nbits );
 extern uint32_t reg_to_bin(char *reg);
 extern uint32_t calc_num(bool signd, int num_bits, char *numstr);
 extern bool check_sf(char *r1, char *r2);
