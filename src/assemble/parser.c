@@ -2,6 +2,8 @@
 #include "tokenizer.h"
 #include "funtable.h"
 
+//writes the binary instruction associated with a given
+// string instruction, 'line' and it's address
 void parse_line(char *line, int addr) {
     //invoke tokeniser
     tokenized_line *tline = tokenize(line);
@@ -19,4 +21,7 @@ void parse_line(char *line, int addr) {
     //invoke function from map and pass into file-writer
     uint32_t bin = (get_bin_function(tline->inst))(*tline, addr);
     write_instruction(bin);
+
+    //free the heap allocated tokenized_line type
+    free_tokenized(tline);
 }

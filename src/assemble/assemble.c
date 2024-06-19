@@ -26,5 +26,8 @@ int main(int argc, char **argv) {
   r_close();
   w_close();
 
+  //free heap allocated resources
+  free_table();
+
   return EXIT_SUCCESS;
 }

@@ -105,7 +105,7 @@ static uint32_t reg_logic(char *inst, char *rd, char *rn, char *rm, char *shift,
     return result;
 }
 
-static uint32_t wide_move(char *inst, char *rd, char *shift, char *num_literal) {
+static uint32_t wide_move(char *inst, char *rd, char *shift, char *num_str) {
     uint32_t opc = 0;
     uint32_t hw = 0;
 
@@ -122,7 +122,7 @@ static uint32_t wide_move(char *inst, char *rd, char *shift, char *num_literal) 
 
     uint32_t result = 0;
     result += reg_to_bin(rd);
-    result += calc_num(false, 16, num_literal + 1) << 5;
+    result += calc_num(false, 16, num_str + 1) << 5;
     result += hw << 21;
     result += 0b100101 << 23;
     result += opc << 29;

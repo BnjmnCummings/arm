@@ -8,8 +8,8 @@
 #define DEC_BASE 10
 
 extern uint32_t reg_to_bin(char *reg);
-extern uint32_t calc_num(bool is_signed, int num_bits, char *num_literal);
+extern uint32_t calc_num(bool is_signed, int num_bits, char *num_str);
 extern bool check_sf(char *r1, char *r2);
-extern uint32_t calc_offset(bool is_signed, int num_bits, char *num_literal, int addr);
+extern uint32_t calc_offset(bool is_signed, int num_bits, char *num_str, int addr);
 
 #endif //ARMV8_31_ASS_UTIL_H

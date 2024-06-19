@@ -1,11 +1,11 @@
 #include "filereader.h"
 #include "parser.h"
 
-
 static FILE *in;
 
 #define INC(addr) (addr += 4)
 
+//checks if a given string 'line' contains a label
 static bool is_label(char *line) {
     if (line[strcspn(line, " ") - 1] == ':') {
         line[strcspn(line, " ")] = '\0';
@@ -15,6 +15,7 @@ static bool is_label(char *line) {
     }
 }
 
+//initialises the input stream as given by cli arguments
 void init_file_reader(char * filename) {
     in = fopen(filename, "r");
     if(in == NULL) {
@@ -23,6 +24,8 @@ void init_file_reader(char * filename) {
     }
 }
 
+//'line function' that handles the "first pass".
+//finds labels in line and allocates them memory addresses in the symbol table
 void read_symbol(char *buffer, int *addr) {
     if (buffer[0] != '\0') {
         if (is_label(buffer)) {
@@ -34,6 +37,8 @@ void read_symbol(char *buffer, int *addr) {
     }
 }
 
+//'line function' that handles the "second pass".
+//passes each line into the parser to be converted into an instruction
 void read_line(char *buffer, int *addr) {
     if (!is_label(buffer) && buffer[0] != '\0') {
         parse_line(buffer, *addr);
@@ -41,6 +46,7 @@ void read_line(char *buffer, int *addr) {
     }
 }
 
+//reads a file and handles each line with a given function 'read_func'
 void read_file(void (*read_func)(char *, int *)) {
     char *buffer = malloc(MAX_LINE_LENGTH);
     int addr = 0;
@@ -56,6 +62,6 @@ void read_file(void (*read_func)(char *, int *)) {
 }
 
 //invokes 'fclose()' on read-file pointer
-void r_close() {
+void r_close(void) {
     fclose(in);
 }

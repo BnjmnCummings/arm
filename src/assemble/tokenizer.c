@@ -29,7 +29,8 @@ tokenized_line *tokenize(char *line) {
 
     // null-terminate token_list if exact count is known
     if (i < MAX_TOKENS) {
-        tokenized->args[i][0] = '\0'; // mark end of tokens
+        // mark end of tokens
+        tokenized->args[i][0] = '\0';
     }
     tokenized->ntokens = i;
     return tokenized;

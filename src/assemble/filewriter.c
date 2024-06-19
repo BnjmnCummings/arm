@@ -21,6 +21,6 @@ void write_instruction(int32_t word) {
 }
 
 //invokes 'fclose()' on write-file pointer
-void w_close() {
+void w_close(void) {
     fclose(out);
 }

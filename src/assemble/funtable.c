@@ -43,6 +43,7 @@ static const pair ftable[] = {
         {".int", &dot_int}
 };
 
+//returns the 'binbuilder' function associated with a given mnemonic
 fun_pointer get_bin_function(char *mnemonic) {
     pair current_pair;
     for (int i = 0; i < NUM_FUNCTIONS; i++) {
