@@ -1,29 +1,26 @@
 movz x0, #0x3f20, lsl #16
 movz w1, #64
-str w1, [x0]
+movz w2, #4
+movz w3, #50, lsl #16
+movz w4, #1
 
-add x2, x0, #0x28
-movz w3, #4
+str w1, [x0]
+add x1, x0, #0x28
 movk x0, #0x1c
-movz w5, #50, lsl #16
-b on
+
+start:
+str w2, [x0]
+mov w5, w3
 
 waitAfterOn:
-    subs w10, w10, #1
+    subs w5, w5, w4
     b.ne waitAfterOn
-    b off
 
-on:
-    str w3, [x0]
-    mov w10, w5
-    b waitAfterOn
+str w2, [x1]
+mov w5, w3
 
 waitAfterOff:
-    subs w10, w10, #1
+    subs w5, w5, w4
     b.ne waitAfterOff
-    b on
 
-off:
-    str w3, [x2]
-    mov w10, w5
-    b waitAfterOff
+b start
