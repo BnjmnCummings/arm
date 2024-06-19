@@ -1,9 +1,11 @@
-x0 = 0x3f20000
-ldr w1, #64
+movz x0, #0x3f2, lsl #16
+movz w1, #64
 str w1, [x0]
-x2 = 0x3f20001c
-ldr w3, #4
-x4 = 0x3f200028
+
+add x2, x0, #0x28
+movz w3, #4
+movk x0, #0x1c
+movz w5 #50, lsl #16
 b on
 
 waitAfterOn:
@@ -12,8 +14,8 @@ b.ne waitAfterOn
 b off
 
 on:
-str w3, [x2]
-movk w10, #50, lsl #16
+str w3, [x0]
+movz w10, w5
 b waitAfterOn
 
 waitAfterOff:
@@ -22,6 +24,6 @@ b.ne waitAfterOff
 b on
 
 off:
-str w3, [x4]
-movk w10, #50, lsl #16
+str w3, [x2]
+movz w10, w5
 b waitAfterOff

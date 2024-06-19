@@ -1,17 +1,24 @@
-COMMENTED ASSEMBLY IN LED_BLINK.S
-// load address of: GPIO pins 0 - 9 mode of input/output
-x0 = 0x3f20000
-ldr w1, #64
+COMMENTED CODE IN LED_BLINK.S
+//aarch64-linux-gnu-as -o kernel8.img led_blink.s
+
+// load address of: GPIO pins 0 - 9 mode of input/output into x0
+movz x0, #0x3f2, lsl #16
+// store number 64 in register w1
+movz w1, #64
 // store 64 into the adress which sets pin 2 to output and all others to input
 str w1, [x0]
 
-// load address of GPSET into x2
-x2 = 0x3f20001c
-// store 4 in w3 which can be used to flip the bit to on or off
-ldr w3, #4
+// put address of GPCLR into x2 register (using sneaky addition from x0 register)
+add x2, x0, #0x28
 
-// load address of GPCLR into x2
-x4 = 0x3f200028
+// store 4 in w3 which can be used to flip the bit to on or off
+movz w3, #4
+
+// replace address of GPIO with adress of GPSET in x0 register (using sneaky addition again)
+movk x0, #0x1c
+
+// store large value for timing swapping on and off in w5
+movz w5 #50, lsl #16
 
 // branch to on
 b on
@@ -24,8 +31,8 @@ b off
 
 // store 4 in GPSET to set pin 2 to high then call waitAfterOn
 on:
-str w3, [x2]
-movk w10, #50, lsl #16
+str w3, [x0]
+movz w10, w5
 b waitAfterOn
 
 // run a sub operation a bunch of times then go to on (create a wait)
@@ -36,6 +43,6 @@ b on
 
 // store 4 in GPCLR to set pin 2 to low then call waitAfterOff
 off:
-str w3, [x4]
-movk w10, #50, lsl #16
+str w3, [x2]
+movz w10, w5
 b waitAfterOff
