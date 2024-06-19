@@ -2,7 +2,7 @@ COMMENTED CODE IN LED_BLINK.S
 //aarch64-linux-gnu-as -o kernel8.img led_blink.s
 
 // load address of: GPIO pins 0 - 9 mode of input/output into x0
-movz x0, #0x3f2, lsl #16
+movz x0, #0x3f20, lsl #16
 // store number 64 in register w1
 movz w1, #64
 // store 64 into the adress which sets pin 2 to output and all others to input
@@ -25,24 +25,24 @@ b on
 
 // run a sub operation a bunch of times then go to off (create a wait)
 waitAfterOn:
-sub w10, w10, #1
-b.ne waitAfterOn
-b off
+    subs w10, w10, #1
+    b.ne waitAfterOn
+    b off
 
 // store 4 in GPSET to set pin 2 to high then call waitAfterOn
 on:
-str w3, [x0]
-movz w10, w5
-b waitAfterOn
+    str w3, [x0]
+    movz w10, w5
+    b waitAfterOn
 
 // run a sub operation a bunch of times then go to on (create a wait)
 waitAfterOff:
-sub w10, w10, #1
-b.ne waitAfterOff
-b on
+    subs w10, w10, #1
+    b.ne waitAfterOff
+    b on
 
 // store 4 in GPCLR to set pin 2 to low then call waitAfterOff
 off:
-str w3, [x2]
-movz w10, w5
-b waitAfterOff
+    str w3, [x2]
+    movz w10, w5
+    b waitAfterOff
