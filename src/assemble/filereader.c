@@ -52,7 +52,13 @@ void read_file(void (*read_func)(char *, int *)) {
     }
 
     free(buffer);
+    //rewind to the beginning of the file
+    rewind(in);
 }
+
+//void rewind_file(){
+//    rewind(in);
+//}
 
 void rclose() {
     fclose(in);
