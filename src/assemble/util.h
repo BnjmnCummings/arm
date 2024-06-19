@@ -4,11 +4,8 @@
 //add any useful functions which are reused project-wide
 #include "assemble.h"
 
-#define FIRST_BYTE  0x000000FF
-#define SECOND_BYTE 0x0000FF00
-#define THIRD_BYTE  0x00FF0000
-#define FOURTH_BYTE 0xFF000000
-#define BYTE_SIZE   8
+#define HEX_BASE 16
+#define DEC_BASE 10
 
 extern uint32_t reg_to_bin(char *reg);
 extern uint32_t calc_num(bool is_signed, int num_bits, char *num_literal);

@@ -1,35 +1,41 @@
 #include "util.h"
+#define MASK_OF_SIZE(num_bits) ((1 << num_bits) - 1)
 
+//converts a given register as an unsigned binary integer
 uint32_t reg_to_bin(char *reg) {
     if (strcmp(reg + 1, "zr") == 0) {
         return 0b11111;
     } else {
-    return strtol(reg + 1, NULL, 10);
+    return strtol(reg + 1, NULL, DEC_BASE);
     }
 }
 
+//calculates binary value of a hexadecimal or decimal literal
 uint32_t calc_num(bool is_signed, int num_bits, char *num_literal) {
     int num;
+    //handles hex and binary cases
     if (strncmp(num_literal, "0x", 2) == 0) {
-        num = strtol(num_literal, NULL, 16);
+        num = strtol(num_literal, NULL, HEX_BASE);
     } else {
-        num = strtol(num_literal, NULL, 10);
+        num = strtol(num_literal, NULL, DEC_BASE);
     }
 
     if (!is_signed || num >= 0) {
         return num;
     } else {
-        uint32_t snum = num;
-        snum &= (1 << num_bits) - 1;
-        return snum;
+        //for negative numbers, only take the first 'num_bits' of bits
+        return num  & MASK_OF_SIZE(num_bits);
     }
 }
 
+//calculates offset between the location of a branch stored in 'num_literal'
+// and the current address 'addr'.
 uint32_t calc_offset(bool is_signed, int num_bits, char *num_literal, int addr) {
     int32_t num = calc_num(is_signed, num_bits, num_literal);
-    return ((uint32_t) (num - addr) / 4) & ((1 << num_bits) - 1);
+    return ((uint32_t) (num - addr) / 4) & MASK_OF_SIZE(num_bits);
 }
 
+//returns true if either argument is a 32 bit register
 bool check_sf(char *r1, char *r2) {
     return (r1[0] == 'x') || (r2[0] == 'x');
 }
