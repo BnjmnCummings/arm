@@ -7,11 +7,10 @@
 
 #define MAX_LINE_LENGTH 80
 
-//passes each line into the parser
-extern void read_symbol(char *, int *);
-extern void read_line(char *, int *);
-extern void read_file(void (*f)(char *, int *));
-extern void initFileReader(char *);
-extern void rclose();
+extern void init_file_reader(char *filename);
+extern void read_symbol(char *buffer, int *addr);
+extern void read_line(char *buffer, int *addr);
+extern void read_file(void (*read_func)(char *, int *));
+extern void r_close(void);
 
 #endif //ARMV8_31_ASS_FILEREADER_H

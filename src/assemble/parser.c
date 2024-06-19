@@ -1,21 +1,22 @@
 #include "parser.h"
+#include "tokenizer.h"
+#include "funtable.h"
 
 void parse_line(char *line, int addr) {
-    printf("got to parse line for %s\n", line);
     //invoke tokeniser
     tokenized_line *tline = tokenize(line);
 
-    //get lables
-    //replace lables with address (int) as a string with # char before it
-    for(int i = 0; i<MAX_TOKENS; i++) { //TODO: alter the tokenizer.c to get the number of tokens
-        int labelAddress = get_address(tline->token_list[i]);
-        if(labelAddress != SYMBOL_NOTFOUND) {
+    //get labels and replace with address as a formatted string
+    for(int i = 0; i<tline->ntokens; i++) {
+        int label_address = get_address(tline->args[i]);
+        if(label_address != SYMBOL_NOTFOUND) {
             token buffer;
-            sprintf(buffer, "#%d", labelAddress);
-            strcpy(tline->token_list[i], buffer);
+            sprintf(buffer, "#%d", label_address);
+            strcpy(tline->args[i], buffer);
         }
     }
 
-    //invoke function from map and pass into filewriter
-    (getFunction(tline->type))(tline->type, tline->token_list, addr); // TODO RENAME "type"
+    //invoke function from map and pass into file-writer
+    uint32_t bin = (get_bin_function(tline->inst))(*tline, addr);
+    write_instruction(bin);
 }

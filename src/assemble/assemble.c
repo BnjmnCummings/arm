@@ -1,6 +1,7 @@
 #include "assemble.h"
 #include "filewriter.h"
 #include "filereader.h"
+#include "symtable.h"
 
 int main(int argc, char **argv) {
   
@@ -9,17 +10,21 @@ int main(int argc, char **argv) {
     fprintf( stderr, "Error: invalid arguments!, \n" );
     exit(EXIT_FAILURE);
   }
+
   //initialise input and output files
-  initFileReader(argv[1]);
-  initFileWriter(argv[2]);
+  init_file_reader(argv[1]);
+  init_file_writer(argv[2]);
   init_table();
 
+  //first pass
   read_file(&read_symbol);
-  rclose();
-  initFileReader(argv[1]);
+
+  //second pass
   read_file(&read_line);
 
-  rclose();
-  wclose();
+  //file closing
+  r_close();
+  w_close();
+
   return EXIT_SUCCESS;
 }
