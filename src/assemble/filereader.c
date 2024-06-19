@@ -3,7 +3,7 @@
 
 static FILE *in;
 
-#define INC(addr) (addr += 4)
+#define INC_ADDR(addr) (addr += 4)
 
 //checks if a given string 'line' contains a label
 static bool is_label(char *line) {
@@ -32,7 +32,7 @@ void read_symbol(char *buffer, int *addr) {
             buffer[strlen(buffer) - 1] = '\0';
             store_symbol(buffer, *addr);
         } else {
-            INC(*addr);
+            INC_ADDR(*addr);
         }
     }
 }
@@ -42,7 +42,7 @@ void read_symbol(char *buffer, int *addr) {
 void read_line(char *buffer, int *addr) {
     if (!is_label(buffer) && buffer[0] != '\0') {
         parse_line(buffer, *addr);
-        INC(*addr);
+        INC_ADDR(*addr);
     }
 }
 

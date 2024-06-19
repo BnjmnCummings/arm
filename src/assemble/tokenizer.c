@@ -1,5 +1,7 @@
 #include "tokenizer.h"
 
+//parses string 'line' into a tokenized_line
+// containing its mnemonic, a list of arguments and the number of arguments
 tokenized_line *tokenize(char *line) {
     // memory allocation
     tokenized_line *tokenized = malloc(sizeof(tokenized_line));
