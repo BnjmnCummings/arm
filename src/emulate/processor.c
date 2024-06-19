@@ -27,21 +27,20 @@ u_int64_t readRegister(bool in64BitMode, u_int32_t registerNumb){
     return read32BitModeRegister(registerNumb);
 }
 
-static bool write32BitModeRegister(u_int32_t registerNumb, u_int64_t data) {
+static void write32BitModeRegister(u_int32_t registerNumb, u_int64_t data) {
     assert((0 <= registerNumb) && (registerNumb <= 30));
     u_int64_t bitMask32 = (((u_int64_t) 1) << 32) - 1;
     CPU.generalPurpose[registerNumb] = data & bitMask32;
-    return true;
 }
 
-bool writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
-    if (registerNumb == 31) { return true; }
+void writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data){
+    if (registerNumb == 31) { return; }
     assert((0 <= registerNumb) && (registerNumb <= 30));
     if (in64BitMode) {
         CPU.generalPurpose[registerNumb] = data;
-        return true;
+        return;
     }
-    return write32BitModeRegister(registerNumb, data);
+    write32BitModeRegister(registerNumb, data);
 }
 
 uint64_t readMemory(bool in64BitMode, u_int64_t memoryAddress){
