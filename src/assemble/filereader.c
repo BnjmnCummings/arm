@@ -7,13 +7,19 @@ static FILE *in;
 #define INC(addr) (addr += 4)
 
 static bool isLabel(char *line) {
-    return (line[strlen(line) - 1] == ':' && isalpha(line[0]));
+    // TODO(check edge cases, not following rules)
+    if (line[strcspn(line, " ") - 1] == ':') {
+        line[strcspn(line, " ")] = '\0';
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void initFileReader(char * filename) {
     in = fopen(filename, "r");
     if(in == NULL) {
-        fprintf( stderr, "Error: can’t open %s\n", filename );
+        fprintf( stderr, "Error: can't open %s\n", filename );
         exit(EXIT_FAILURE);
     }
 }
@@ -41,7 +47,7 @@ void read_file(void (*read_func)(char *, int *)) {
     int addr = 0;
 
     while( fgets(buffer, MAX_LINE_LENGTH, in) != NULL ) {
-        buffer[strcspn(buffer, "\n")] = 0;
+        buffer[strcspn(buffer, "\n")] = '\0';
         (*read_func)(buffer, &addr);
     }
 
