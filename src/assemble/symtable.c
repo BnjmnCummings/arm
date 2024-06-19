@@ -11,7 +11,6 @@ static void resize(void) {
 void store_symbol(char *label, int addr) {
     strcpy(table->lb[table->nitems], label);
     table->addr[table->nitems] = addr;
-    printf("label: %s, addr: %d\n", table->lb[table->nitems], table->addr[table->nitems]);
     table->nitems++;
     if (table->nitems >= table->capacity) {
         resize();

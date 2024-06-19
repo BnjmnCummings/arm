@@ -1,7 +1,8 @@
 #include "funtable.h"
+#include "binbuilder.h"
 
 
-static const ftable_t ftable = {
+static const pair ftable[] = {
         {"add",  &data_process},
         {"adds", &data_process},
         {"sub",  &data_process},
@@ -30,13 +31,13 @@ static const ftable_t ftable = {
         {"mneg", &data_process},
         {"b",    &unc_branch},
         {"br",   &reg_branch},
-        {"br.eq", &con_branch},
-        {"br.ne", &con_branch},
-        {"br.ge", &con_branch},
-        {"br.lt", &con_branch},
-        {"br.gt", &con_branch},
-        {"br.le", &con_branch},
-        {"br.al", &con_branch},
+        {"b.eq", &con_branch},
+        {"b.ne", &con_branch},
+        {"b.ge", &con_branch},
+        {"b.lt", &con_branch},
+        {"b.gt", &con_branch},
+        {"b.le", &con_branch},
+        {"b.al", &con_branch},
         {"ldr",  &load_store},
         {"str",  &load_store},
         {".int", &dot_int}
@@ -50,4 +51,5 @@ fun_pointer getFunction(char *mnemonic) {
             return current_pair.function;
         }
     }
+    return NULL;
 }

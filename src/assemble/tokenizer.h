@@ -5,12 +5,14 @@
 
 #define TOKEN_SIZE 100 // set size to max token size
 #define MAX_TOKENS 5
+#define INST_SIZE 5
 
 typedef char token[TOKEN_SIZE];
 
 typedef struct {
-    char *type; // type of instruction being handled
-    token *token_list; // list of operators
+    char inst[INST_SIZE]; // type of instruction being handled
+    token *args; // list of operators
+    int ntokens;
 } tokenized_line;
 
 
