@@ -27,7 +27,7 @@ void init_file_reader(char * filename) {
 //'line function' that handles the "first pass".
 //finds labels in line and allocates them memory addresses in the symbol table
 void read_symbol(char *buffer, int *addr) {
-    if (buffer[0] != '\0') {
+    if (buffer[0] != '\0' && strncmp(buffer, "//", 2) != 0) {
         if (is_label(buffer)) {
             buffer[strlen(buffer) - 1] = '\0';
             store_symbol(buffer, *addr);
@@ -40,7 +40,7 @@ void read_symbol(char *buffer, int *addr) {
 //'line function' that handles the "second pass".
 //passes each line into the parser to be converted into an instruction
 void read_line(char *buffer, int *addr) {
-    if (!is_label(buffer) && buffer[0] != '\0') {
+    if (!is_label(buffer) && buffer[0] != '\0' && strncmp(buffer, "//", 2) != 0) {
         parse_line(buffer, *addr);
         INC_ADDR(*addr);
     }
