@@ -2,8 +2,9 @@
 
 extern processor CPU;
 
-static void processArithmetic(uint64_t opc, int64_t rn, uint64_t op2, bool sf, uint32_t rd) {
-    int64_t result;
+static void processArithmetic(uint64_t opc, uint64_t rn, uint64_t op2, bool sf, uint32_t rd) {
+    uint64_t result;
+    int64_t sresult;
     uint64_t sigBitShift = (32 + (32 * sf) - 1);
 
     switch (opc)
@@ -15,15 +16,26 @@ static void processArithmetic(uint64_t opc, int64_t rn, uint64_t op2, bool sf, u
     //adds
     case (0b01):
         result = rn + op2;
+        sresult = ((int64_t) rn) + ((int64_t) op2);
         CPU.PSTATE.Negative = (result >> sigBitShift) & 0b1;
         CPU.PSTATE.Zero = result == 0;
-        if ((int64_t) op2 >= 0) {
-            // (op2 >> sigBitShift) & 0b1
-        CPU.PSTATE.Carry = result < rn;
-        CPU.PSTATE.Overflow = result < rn;
+
+        // if ((int64_t) op2 >= 0) {
+        // CPU.PSTATE.Carry = result < rn;
+        // CPU.PSTATE.Overflow = result < rn;
+        // } else {
+        // CPU.PSTATE.Carry = result > rn;
+        // CPU.PSTATE.Overflow = result > rn;
+        // }
+
+        if (sf) {
+            CPU.PSTATE.Carry =  __builtin_uaddl_overflow(rn, op2, &result);
+            CPU.PSTATE.Overflow =  __builtin_saddl_overflow((int64_t) rn, (int64_t) op2, &sresult);
         } else {
-        CPU.PSTATE.Carry = result > rn;
-        CPU.PSTATE.Overflow = result > rn;
+            uint32_t r = (uint32_t) rn + (uint32_t) op2;
+            int32_t sr = (int32_t) rn + (int32_t) op2;
+            CPU.PSTATE.Carry =  __builtin_uadd_overflow((uint32_t) rn, (uint32_t) op2, &r);
+            CPU.PSTATE.Overflow =  __builtin_sadd_overflow((int32_t) rn, (int32_t) op2, &sr);
         }
         break;
     //sub
@@ -33,14 +45,26 @@ static void processArithmetic(uint64_t opc, int64_t rn, uint64_t op2, bool sf, u
     //subs
     case (0b11):
         result = rn - op2;
+        sresult = (int64_t) rn + (int64_t) op2;
         CPU.PSTATE.Negative = (result >> sigBitShift) & 0b1;
         CPU.PSTATE.Zero = result == 0;
-        if ((int64_t) op2 >= 0) {
-            CPU.PSTATE.Overflow = result > rn;
-            CPU.PSTATE.Carry = result >= 0;
+
+        // if ((int64_t) op2 >= 0) {
+        //     CPU.PSTATE.Overflow = result > rn;
+        //     CPU.PSTATE.Carry = result >= 0;
+        // } else {
+        //     CPU.PSTATE.Overflow = result < rn;
+        //     CPU.PSTATE.Carry = result <= 0;
+        // }
+        
+        if (sf) {
+            CPU.PSTATE.Carry = ! __builtin_usubl_overflow(rn, op2, &result);
+            CPU.PSTATE.Overflow =  __builtin_ssubl_overflow((int64_t) rn, (int64_t) op2, &sresult);
         } else {
-            CPU.PSTATE.Overflow = result < rn;
-            CPU.PSTATE.Carry = result <= 0;
+            uint32_t r = (uint32_t) rn - (uint32_t) op2;
+            int32_t sr = (int32_t) rn - (int32_t) op2;
+            CPU.PSTATE.Carry = !__builtin_usub_overflow((uint32_t) rn, (uint32_t) op2, &r);
+            CPU.PSTATE.Overflow =  __builtin_ssub_overflow((int32_t) rn, (int32_t) op2, &sr);
         }
         break;
     default:
