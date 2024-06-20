@@ -73,7 +73,7 @@ static void processArithmetic(uint64_t opc, uint64_t rn, uint64_t op2, bool sf, 
     }
 
     // write to Rd
-    writeRegister(sf, rd, result);
+    write_register(sf, rd, result);
 }
 
 // arithmeticInstruction is a function taking the split instruction (word) as argument
@@ -89,7 +89,7 @@ static void arithmeticInstruction(u_int32_t splitWord[]){
     if (operand[0]) {
         op2 = op2 << 12;
     }
-    int64_t rn = readRegister(splitWord[0], operand[2]);
+    int64_t rn = read_register(splitWord[0], operand[2]);
     processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[5]);
 }
 
@@ -116,15 +116,15 @@ static void wideMoveInstruction(u_int32_t splitWord[]){
         break;
     //movk
     case (0b11):{
-        uint64_t rd = readRegister(splitWord[0], splitWord[5]);
-        result = (rd & getMask(sh + 16, 63)) + op + (rd & getMask(0, sh - 1));
+        uint64_t rd = read_register(splitWord[0], splitWord[5]);
+        result = (rd & get_mask(sh + 16, 63)) + op + (rd & get_mask(0, sh - 1));
         break;
     }
     default:
         result = 0;
         break;
     }
-    writeRegister(splitWord[0], splitWord[5], result);
+    write_register(splitWord[0], splitWord[5], result);
 }
 
 static u_int64_t shift(uint64_t val, uint64_t inc, uint64_t type, bool sf) {
@@ -142,13 +142,13 @@ static u_int64_t shift(uint64_t val, uint64_t inc, uint64_t type, bool sf) {
     else if (type == 0b10) {
         res = val >> inc;
         if ((val >> maskVal) & 0b1) {
-            res += getMask(maskVal - (inc - 1), maskVal);
+            res += get_mask(maskVal - (inc - 1), maskVal);
         }
     }
     // ror shift
     else {
         res = val >> inc;
-        res += (val & getMask(0, inc - 1)) << (maskVal - (inc - 1));
+        res += (val & get_mask(0, inc - 1)) << (maskVal - (inc - 1));
     }
     printf("result: %lx\n", res);
     if (sf) {
@@ -165,16 +165,16 @@ static void registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf,
     }
     switch (opc) {
         case 0b00: // Bitwise M
-            writeRegister(sf, rd, rn & op);
+            write_register(sf, rd, rn & op);
             break;
         case 0b01:
-            writeRegister(sf, rd, rn | op);
+            write_register(sf, rd, rn | op);
             break;
         case 0b10:
-            writeRegister(sf, rd, rn ^ op);
+            write_register(sf, rd, rn ^ op);
             break;
         case 0b11:
-            writeRegister(sf, rd, rn & op);
+            write_register(sf, rd, rn & op);
             CPU.PSTATE.Negative = (rn & op) >> (32 + (32 * sf) - 1);
             CPU.PSTATE.Zero = (rn & op) == 0;
             CPU.PSTATE.Carry = 0;
@@ -191,17 +191,17 @@ static void registerParser(int opc, int rd, u_int64_t rn, u_int64_t op, bool sf,
 static void multiplyInstruction(u_int splitWord[]){
     u_int sf = splitWord[0];
 
-    int64_t rn = readRegister(sf, splitWord[8]);
-    int64_t rm = readRegister(sf, splitWord[6]);
+    int64_t rn = read_register(sf, splitWord[8]);
+    int64_t rm = read_register(sf, splitWord[6]);
 
     bool x = splitWord[7] >> 5;
-    int64_t ra = readRegister(sf, splitWord[7] & 0b11111);
+    int64_t ra = read_register(sf, splitWord[7] & 0b11111);
     int64_t mul = rn * rm;
     // printf("x: %d, operand: %u\n", x, splitWord[7]);
     if (x) {
-        writeRegister(sf, splitWord[9], ra - mul);
+        write_register(sf, splitWord[9], ra - mul);
     } else {
-        writeRegister(sf, splitWord[9], ra + mul);
+        write_register(sf, splitWord[9], ra + mul);
     }
 }
 
@@ -214,8 +214,8 @@ static void logicalShiftInstruction(u_int splitWord[]) {
     u_int negate = splitWord[5] & 0x1;
     u_int sf = splitWord[0];
     u_int64_t firstOp = splitWord[7];
-    u_int64_t rn = readRegister(sf, splitWord[8]);
-    u_int64_t rm = readRegister(sf, splitWord[6]);
+    u_int64_t rn = read_register(sf, splitWord[8]);
+    u_int64_t rm = read_register(sf, splitWord[6]);
 
     if (!sf) {
         firstOp &= ((uint64_t) 2 << 32) - 1;
@@ -233,14 +233,14 @@ static void arithmeticShiftInstruction(u_int splitWord[]){
     u_int shiftMask = (splitWord[5] >> 1) & 0b11;
     u_int sf = splitWord[0];
     u_int64_t firstOp = splitWord[7];
-    u_int64_t rn = readRegister(sf, splitWord[8]);
-    u_int64_t rm = readRegister(sf, splitWord[6]);
+    u_int64_t rn = read_register(sf, splitWord[8]);
+    u_int64_t rm = read_register(sf, splitWord[6]);
     uint64_t op2 = shift(rm, firstOp, shiftMask, sf);
 
     processArithmetic(splitWord[1], rn, op2, splitWord[0], splitWord[9]);
 }
 
-bool decodeDataImmediate(uint32_t word) {
+bool decode_data_immediate(uint32_t word) {
     printf("Entering Data processing (immediate) group with word: %u\n" ,word);
     // Decode to: sf, opc, 100, opi, operand, rd
     u_int32_t splitInstruction[] = {
@@ -272,11 +272,11 @@ bool decodeDataImmediate(uint32_t word) {
             return false;
         }
     }
-    incrementPC();
+    increment_pc();
     return true;
 }
 
-bool decodeDataRegister(uint32_t word) {
+bool decode_data_register(uint32_t word) {
     printf("Entering Data processing (register) group with word: %u\n" ,word);
     // Decode to: sf, opc, M, 10, 1, opr, rm, operand, rn, rd
     u_int32_t splitInstruction[] = {
@@ -315,6 +315,6 @@ bool decodeDataRegister(uint32_t word) {
         printf("No data processing (register) instruction matching M and opr values: %d, %d\n", splitInstruction[2], splitInstruction[5]);
         return false;
     }
-    incrementPC();
+    increment_pc();
     return true;
 }

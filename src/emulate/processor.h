@@ -10,7 +10,6 @@
 #define MEMORYSIZE 2 << 20
 #define NUMBERGENERALREGISTERS 31
 
-
 typedef struct {
     bool Negative; // Negative condition flag
     bool Zero; // Zero condition flag
@@ -23,17 +22,14 @@ typedef struct {
     u_int64_t generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
     const uint64_t ZR; // zero register
     u_int64_t PC; // program counter
-    // int SP; // stack pointer (Un-needed)
     pstate PSTATE; // Processor State Register
 } processor;
 
-void setupCPU(void);
-void incrementPC(void);
-
-u_int64_t readRegister(bool in64BitMode, u_int32_t registerNumb);
-void writeRegister(bool in64BitMode, u_int32_t registerNumb, u_int64_t data);
-
-uint64_t readMemory(bool in64BitMode, u_int64_t memoryAddress);
-bool writeMemory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data);
+extern void setup_cpu(void);
+extern void increment_pc(void);
+extern u_int64_t read_register(bool in64BitMode, u_int32_t registerNumb);
+extern void write_register(bool in64BitMode, u_int32_t registerNumb, u_int64_t data);
+extern uint64_t read_memory(bool in64BitMode, u_int64_t memoryAddress);
+extern bool write_memory(bool in64BitMode, u_int64_t memoryAddress, u_int64_t data);
 
 #endif //ARMV8_31_PROCESSOR_H

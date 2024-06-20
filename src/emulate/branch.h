@@ -3,6 +3,6 @@
 
 #include "emulate.h"
 
-bool decodeBranch(uint32_t word);
+extern bool decode_branch(uint32_t word);
 
 #endif //ARMV8_31_BRANCH_H

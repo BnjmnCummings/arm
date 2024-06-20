@@ -4,13 +4,13 @@ extern processor CPU;
 
 static void loadOrStore(bool ldOrSt, bool bitMode, uint32_t regNumb, uint32_t addr) {
     if (ldOrSt) {
-        uint64_t x = readMemory(bitMode, addr);
+        uint64_t x = read_memory(bitMode, addr);
         printf("loading %lu in mode %u at addr %u\n", x, bitMode, addr);
-        writeRegister(bitMode, regNumb, readMemory(bitMode, addr));
+        write_register(bitMode, regNumb, read_memory(bitMode, addr));
     } else {
-        uint64_t x = readRegister(bitMode, regNumb);
+        uint64_t x = read_register(bitMode, regNumb);
         printf("storing %lu from reg %u in mode %u at addr %u \n", x, regNumb, bitMode, addr);
-        writeMemory(bitMode, addr, readRegister(bitMode, regNumb));
+        write_memory(bitMode, addr, read_register(bitMode, regNumb));
     }
 }
 
@@ -52,7 +52,7 @@ static void singleDataTransferInstruction(const u_int32_t splitWord[]){
     assert((0 <= targetRegister) && (targetRegister <= 30));
     u_int32_t xn = brokenDownOperand[3];
     assert((0 <= xn) && (xn <= 30));
-    u_int64_t xnValue = readRegister(1, xn);
+    u_int64_t xnValue = read_register(1, xn);
 
     // U == 1 then unsigned immediate offset
     if (splitWord[4]) {
@@ -84,7 +84,7 @@ static void singleDataTransferInstruction(const u_int32_t splitWord[]){
 
             u_int32_t xm = 0b11111 & (brokenDownOffset[1] >> 4);
             assert((0 <= xm) && (xm <= 30));
-            u_int64_t xmValue = readRegister(1, xm);
+            u_int64_t xmValue = read_register(1, xm);
 
             u_int64_t addr = xmValue + xnValue;
             assert((0 <= addr) && (addr < MEMORYSIZE));
@@ -103,7 +103,7 @@ static void singleDataTransferInstruction(const u_int32_t splitWord[]){
                 u_int64_t readWriteValue = xnValue + simm9;
 
                 loadOrStore(brokenDownOperand[1], registerMode, targetRegister, readWriteValue);
-                writeRegister(1, xn, readWriteValue);
+                write_register(1, xn, readWriteValue);
             }
                 // I must be 0 so post indexed
             else {
@@ -114,14 +114,14 @@ static void singleDataTransferInstruction(const u_int32_t splitWord[]){
                 assert((-256 <= simm9) && (simm9 <= 255));
                 u_int64_t newValue = xnValue + simm9;
 
-                writeRegister(1, xn, newValue);
+                write_register(1, xn, newValue);
             }
         }
         // in this situation a pattern must be matched so error message needed for nothing matching
     }
 }
 
-bool decodeDataTransfer(uint32_t word) {
+bool decode_data_transfer(uint32_t word) {
     printf("Entering loads and stores group with word: %u\n" ,word);
     // Decode to: bit (1 bit), sf (1 bit), bit (1 bit), op0+ (4 bit), U (1 bit), 'operand' (19 bit), rt (5 bit)
     u_int32_t splitInstruction[] = {
@@ -148,6 +148,6 @@ bool decodeDataTransfer(uint32_t word) {
         printf("No load or store instruction matching bit 31, 29 and U values: %d, %d, %d\n", splitInstruction[0], splitInstruction[2], splitInstruction[4]);
         return false;
     }
-    incrementPC();
+    increment_pc();
     return true;
 }

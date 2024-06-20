@@ -28,7 +28,7 @@ static void registerBranch(u_int32_t splitWord[]){
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 31));
-    u_int64_t newPCAddressLocation = readRegister(splitWord[0], registerNumb);
+    u_int64_t newPCAddressLocation = read_register(splitWord[0], registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
     // update the PC value and return true
@@ -97,7 +97,7 @@ static void conditionalBranch(const u_int32_t splitWord[]){
     }
 }
 
-bool decodeBranch(uint32_t word) {
+bool decode_branch(uint32_t word) {
     printf("Entering branch group with word: %u\n" ,word);
     // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
     // unsure if changing this to int is correct vs uint

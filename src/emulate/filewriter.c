@@ -60,7 +60,7 @@ static void printNonZeroMemory(FILE *filePath) {
     }
 }
 
-void writeCPU(FILE *filePath) {
+void write_cpu(FILE *filePath) {
     //General Purpose and PC Registers
     fprintf(filePath, "Registers:\n");
     printRegisters(filePath);

@@ -3,6 +3,6 @@
 
 #include "emulate.h"
 
-bool decodeDataTransfer(uint32_t word);
+extern bool decode_data_transfer(uint32_t word);
 
 #endif //ARMV8_31_DATATRANSFER_H

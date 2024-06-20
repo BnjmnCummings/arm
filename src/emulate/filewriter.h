@@ -7,6 +7,6 @@
 #include "processor.h"
 #include "emulate.h"
 
-void writeCPU(FILE *file);
+extern void write_cpu(FILE *file);
 
 #endif //ARMV8_31_FILE_WRITER_H

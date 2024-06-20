@@ -14,6 +14,7 @@ clean:
 
 emulate:	$(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o emulate $(LDLIBS)
+	cp emulate /homes/bc2423/ImperativeProgramming/armv8_testsuite/solution
 
 emulate.o:	emulate.c emulate.h filewriter.h processor.h dataprocess.h datatransfer.h branch.h
 filewriter.o:	filewriter.c filewriter.h

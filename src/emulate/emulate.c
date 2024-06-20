@@ -7,7 +7,7 @@
 
 extern processor CPU;
 
-u_int64_t getMask(int start, int end) {
+u_int64_t get_mask(int start, int end) {
     if (start >= end) { return 0; }
     return (((u_int64_t) 2 << (end - start)) - 1) << start;
 }
@@ -54,7 +54,7 @@ int fDECycle(void){
         // }
 
         // read word in little endian
-        u_int32_t word = readMemory(0, pcValue);
+        u_int32_t word = read_memory(0, pcValue);
 
         // check if the instruction is a halt (Untested)
         if (word == 0x8a000000){
@@ -66,25 +66,25 @@ int fDECycle(void){
 
         // 101x -> Branch group
         if ((op0 & 0b1110) == 0b1010) {
-            if (!decodeBranch(word)) {
+            if (!decode_branch(word)) {
                 return 4;
             }
         }
         // 100x -> Data processing (immediate) group
         else if ((op0 & 0b1110) == 0b1000) {
-            if (!decodeDataImmediate(word)) {
+            if (!decode_data_immediate(word)) {
                 return 5;
             }
         }
         // x101 -> Data processing (register) group
         else if ((op0 & 0b111) == 0b101) {
-            if (!decodeDataRegister(word)) {
+            if (!decode_data_register(word)) {
                 return 6;
             }
         }
         // x1x0 -> Loads and stores group
         else if ((op0 & 0b101) == 0b100) {
-            if (!decodeDataTransfer(word)) {
+            if (!decode_data_transfer(word)) {
                 return 7;
             }
         }
@@ -99,7 +99,7 @@ int fDECycle(void){
 
 int main(int argc, char **argv) {
 
-    setupCPU();
+    setup_cpu();
     
     // int16_t x = -8;
     // uint32_t y = (uint32_t) ((uint16_t) x);
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     int e;
     if ((e = fDECycle()) != 0){
         printf("FDE cycle failed with error code %d\n", e);
-        writeCPU(stdout);
+        write_cpu(stdout);
         exit(2);
     }
 
@@ -128,10 +128,10 @@ int main(int argc, char **argv) {
             fprintf( stderr, "Can't read given output file\n" );
             exit(11);
         }
-        writeCPU(file);
+        write_cpu(file);
     }
     else {
-        writeCPU(stdout);
+        write_cpu(stdout);
     }
 
     return EXIT_SUCCESS;

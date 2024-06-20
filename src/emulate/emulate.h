@@ -14,6 +14,6 @@
 
 #define BYTESIZE 8
 
-u_int64_t getMask(int start, int end);
+extern u_int64_t get_mask(int start, int end);
 
 #endif //ARMV8_31_EMULATE_H
