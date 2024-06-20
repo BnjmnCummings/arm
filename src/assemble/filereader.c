@@ -16,9 +16,17 @@ static bool is_label(char *line) {
     }
 }
 
+// removes any comments inside the line
 static void remove_comments(char *line) {
+    // if the line is inside a block comment and there is no close, it is all a comment
+    if (comment && !strstr(line, "*/")) {
+        strcpy(line, "");
+        return;
+    }
+
     char *hold = line;
     char *comstart = NULL;
+
     while (hold != NULL) {
         if (comment) {
             hold = strstr(line, "*/");
