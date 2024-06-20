@@ -6,7 +6,7 @@ static FILE *out;
 void init_file_writer(char *filename) {
     out = fopen(filename, "wb");
     if(out == NULL) {
-        fprintf( stderr,"Error: can’t open %s\n", filename );
+        fprintf( stderr,"Error: can't open %s\n", filename );
         exit(EXIT_FAILURE);
     }
 }

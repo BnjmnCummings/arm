@@ -55,7 +55,7 @@ static uint32_t reg_arith(char *inst, char *rd, char *rn, char *rm, char *shift,
         if (strncmp(shift, "lsr", 3 * sizeof(char)) == 0) {
             opr += 0b10;
         } else if (strncmp(shift, "asr", 3 * sizeof(char)) == 0) {
-            opr += 0b10                //0;
+            opr += 0b100;
         }
     }
 
@@ -251,7 +251,6 @@ uint32_t load_store(tokenized_line line, int addr) {
         // pre-indexed
         u = false;
         offset += 0b11;
-        printf("from %s get %d\n", line.args[2], calc_num(true, 9, line.args[2] + 1));
         offset += calc_num(true, 9, line.args[2] + 1) << 2;
     } else if (line.args[2][0] != '#') {
         // register offset
