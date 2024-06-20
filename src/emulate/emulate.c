@@ -7,14 +7,13 @@
 
 extern processor CPU;
 
-u_int64_t get_mask(int start, int end) {
+// returns a mask of 1 bits from start bit to end bit
+uint64_t get_mask(int start, int end) {
     if (start >= end) { return 0; }
-    return (((u_int64_t) 2 << (end - start)) - 1) << start;
+    return (((uint64_t) 2 << (end - start)) - 1) << start;
 }
 
-// binaryFileLoader is a function taking the filename as an argument
-// It copies the contents of the file into the CPU's memory
-// It returns true on a successful execution, false otherwise
+// loads binary data from given filename into memory
 bool binaryFileLoader(char *fileName){
 
     FILE *file = fopen(fileName, "r");
@@ -23,7 +22,7 @@ bool binaryFileLoader(char *fileName){
         return false;
     }
     int currentMemoryAddress = 0;
-    u_int ch;
+    uint ch;
     while( (ch = getc(file)) != EOF ) {
         CPU.memory[currentMemoryAddress] = ch;
         currentMemoryAddress ++;
@@ -33,9 +32,8 @@ bool binaryFileLoader(char *fileName){
     return true;
 }
 
-// fDECycle is a function that takes no inputs
-// It simulates the FDE cycle using other helper functions for each instruction
-// It returns 0 on a successful run or an error code (0 < num < 8) on a fail with a relevant message
+
+// simulates the FDE cycle, return 0 on a successful halt and an error code on failure
 int fDECycle(void){
     while (true){
         // Fetch
@@ -47,22 +45,16 @@ int fDECycle(void){
             return 2;
         }
 
-        // Throw error code 3 if pc points to a memory location not at the start of a word
-        // if (pcValue % 4 != 0){
-        //     printf("fetch failed on nonaligned memory location with pc value: %u\n", pcValue);
-        //     return 3;
-        // }
-
         // read word in little endian
-        u_int32_t word = read_memory(0, pcValue);
+        uint32_t word = read_memory(0, pcValue);
 
-        // check if the instruction is a halt (Untested)
+        // check if the instruction is a halt
         if (word == 0x8a000000){
             break;
         }
 
         // Decode:
-        u_int32_t op0 = 0b1111 & (word >> 25);
+        uint32_t op0 = 0b1111 & (word >> 25);
 
         // 101x -> Branch group
         if ((op0 & 0b1110) == 0b1010) {
@@ -97,14 +89,11 @@ int fDECycle(void){
     return 0;
 }
 
+// sets up CPU, loads binary data from given file into memory,
+// runs the FDE cycle, then prints the CPU state to given file (or stdout)
 int main(int argc, char **argv) {
 
     setup_cpu();
-    
-    // int16_t x = -8;
-    // uint32_t y = (uint32_t) ((uint16_t) x);
-    // printf("%d, %u\n", x, y);
-
 
     // Read from the file
     if (argc > 1) {
@@ -114,6 +103,7 @@ int main(int argc, char **argv) {
         }
     }
 
+    // run FDE cycle
     int e;
     if ((e = fDECycle()) != 0){
         printf("FDE cycle failed with error code %d\n", e);
@@ -121,6 +111,7 @@ int main(int argc, char **argv) {
         exit(2);
     }
 
+    // print CPU state to file or stdout
     if (argc > 2) {
         FILE *file = fopen(argv[2], "w");
 

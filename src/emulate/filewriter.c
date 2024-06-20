@@ -6,14 +6,12 @@
 
 extern processor CPU;
 
-//FILE-WRITER ---
 
 //takes in a pointer to the LSB
-//returns the value of the 4-byte long integer
-static u_int combineLittleEndian(u_int index) {
+//returns the value of the 4-byte integer
+static uint combineLittleEndian(int index) {
 
-    u_int total = 0;
-
+    uint total = 0;
     for(int i = 0; i<4; i++) {
         total += (CPU.memory[index + i]) << (i * 8);
     }
@@ -21,6 +19,7 @@ static u_int combineLittleEndian(u_int index) {
     return total;
 }
 
+// write PSTATE to file
 static void printPState(FILE *filePath) {
 
     char pStateStr[] = "NZCV";
@@ -39,7 +38,7 @@ static void printPState(FILE *filePath) {
     fprintf(filePath, "PSTATE : %s\n", pStateStr);
 }
 
-//register Printer:
+// write register states to file
 static void printRegisters(FILE *filePath) {
     //general purpose registers:
     for(int i = 0; i < NUMBERGENERALREGISTERS; i++) {
@@ -51,15 +50,17 @@ static void printRegisters(FILE *filePath) {
 
 }
 
+// find and write non-zero memory to file
 static void printNonZeroMemory(FILE *filePath) {
     for (int i = 0; i < MEMORYSIZE; i += 4) {
-        uint word = combineLittleEndian(i);
+        uint64_t word = combineLittleEndian(i);
         if (word) {
-            fprintf(filePath,"0x%0*x : %0*x\n", MEMORYWIDTH, i, MEMORYWIDTH, word);
+            fprintf(filePath,"0x%0*x : %0*lx\n", MEMORYWIDTH, i, MEMORYWIDTH, word);
         }
     }
 }
 
+// write CPU state to file
 void write_cpu(FILE *filePath) {
     //General Purpose and PC Registers
     fprintf(filePath, "Registers:\n");

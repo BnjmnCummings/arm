@@ -11,18 +11,18 @@
 #define NUMBERGENERALREGISTERS 31
 
 typedef struct {
-    bool Negative; // Negative condition flag
-    bool Zero; // Zero condition flag
-    bool Carry; // Carry condition flag
-    bool Overflow; // Overflow condition flag
+    bool Negative;  // Negative condition flag
+    bool Zero;      // Zero condition flag
+    bool Carry;     // Carry condition flag
+    bool Overflow;  // Overflow condition flag
 } pstate;
 
 typedef struct {
-    uint8_t memory[MEMORYSIZE];
-    u_int64_t generalPurpose[NUMBERGENERALREGISTERS]; // general purpose registers
-    const uint64_t ZR; // zero register
-    u_int64_t PC; // program counter
-    pstate PSTATE; // Processor State Register
+    uint8_t memory[MEMORYSIZE];                         // memory
+    u_int64_t generalPurpose[NUMBERGENERALREGISTERS];   // general purpose registers
+    const uint64_t ZR;                                  // zero register
+    u_int64_t PC;                                       // program counter
+    pstate PSTATE;                                      // Processor State Register
 } processor;
 
 extern void setup_cpu(void);

@@ -2,43 +2,35 @@
 
 extern processor CPU;
 
-// unconditionalBranch is a function taking the split instruction (word) as argument
-// It applies an offset to the current PC value
-// It returns true on a successful execution, false otherwise
-static void unconditionalBranch(const u_int32_t splitWord[]){
-    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
-    // Note this may need sign extended to 64 bit manually
+// offsets Program Counter by literal value
+static void unconditionalBranch(const uint32_t splitWord[]){
+    // simm26 value
     int64_t offset = splitWord[3] * 4;
 
     // find the new PC value and check validity
     int64_t newPCAddressLocation = (int64_t) CPU.PC + offset;
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
-    // update the PC value and return true
+    // update the PC value
     CPU.PC += offset;
 }
 
-// registerBranch is a function taking the split instruction (word) as argument
-// It changes the PC to a value specified in a specified register
-// It returns true on a successful execution, false otherwise
-static void registerBranch(u_int32_t splitWord[]){
-    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
-    // Note this may need sign extended to 64 bit manually
-    u_int32_t registerNumb = 0b11111 & (splitWord[3] >> 5);
+// set the PC to the value in a specified register
+static void registerBranch(uint32_t splitWord[]){
+    // xn value
+    uint32_t registerNumb = 0b11111 & (splitWord[3] >> 5);
 
     // find the new PC value and check validity
     assert((0 <= registerNumb) && (registerNumb <= 31));
-    u_int64_t newPCAddressLocation = read_register(splitWord[0], registerNumb);
+    uint64_t newPCAddressLocation = read_register(splitWord[0], registerNumb);
     assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
-    // update the PC value and return true
+    // update the PC value
     CPU.PC = newPCAddressLocation;
 }
 
-// conditionalBranchConditionCheck is a function taking the condition on the branch as argument
-// It checks if the encoded condition is true for the current PSTATE
-// It returns whether the condition is true or not
-static bool conditionalBranchConditionCheck(u_int32_t conditionCode){
+// checks and returns if specified condition is satisfied by PSTATE values
+static bool conditionalBranchConditionCheck(uint32_t conditionCode){
     pstate currentPSTATE = CPU.PSTATE;
     bool negativeEqOverflow = (currentPSTATE.Negative == currentPSTATE.Overflow);
 
@@ -64,48 +56,40 @@ static bool conditionalBranchConditionCheck(u_int32_t conditionCode){
     }
 }
 
-// conditionalBranch is a function taking the split instruction (word) as argument
-// It checks an encoded condition and if true, it applies an indicated offset to the PC
-// It returns true on a successful execution, false otherwise
-static void conditionalBranch(const u_int32_t splitWord[]){
-    // Decoded to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
-    u_int32_t operand = splitWord[3];
+// applies offset the the PC given by a literal if the given condition is satisfied
+static void conditionalBranch(const uint32_t splitWord[]){
+    uint32_t operand = splitWord[3];
 
-    // Broken down into: 2 zero bits, simm 19 (19 bit), 0 bit, condition (4 bit)
-    u_int32_t brokenDownOperand[] = {
-            operand >> 24,
-            ((2 << 18) - 1) & (operand >> 5), // simm19
-            0b1 & (operand >> 4),
-            0b1111 & operand // condition encoding
+    uint32_t brokenDownOperand[] = {
+            operand >> 24,                      // 00
+            ((2 << 18) - 1) & (operand >> 5),   // simm19
+            0b1 & (operand >> 4),               // 0
+            0b1111 & operand                    // condition encoding
     };
     assert(brokenDownOperand[0] == 0 && brokenDownOperand[2] == 0);
 
     if (conditionalBranchConditionCheck(brokenDownOperand[3])){
 
-        // Note this may need sign extended to 64 bit manually
         int64_t offset = ((int64_t) ((int32_t) (brokenDownOperand[1] << 13))) >> 11;
 
         // find the new PC value and check validity
         uint32_t newPCAddressLocation = CPU.PC + offset;
-        printf("from offset %ld and simm19 %u, new PC address location: %u\n", offset, brokenDownOperand[1], newPCAddressLocation);
         assert((0 <= newPCAddressLocation) && (newPCAddressLocation < MEMORYSIZE));
 
         // update the PC value
         CPU.PC += offset;
     } else {
-        CPU.PC += 4;
+        increment_pc();
     }
 }
 
+// breaks instruction into constituent parts, and passes them into the corresponding execution function
 bool decode_branch(uint32_t word) {
-    printf("Entering branch group with word: %u\n" ,word);
-    // Decode to: sf (1 bit), bit (1 bit), op0+ (4 bit), 'operand' (26 bit)
-    // unsure if changing this to int is correct vs uint
-    u_int32_t splitInstruction[] = {
-            word >> 31,
-            0b1  & (word >> 30),
-            0b1111 & (word >> 26),
-            ((2 << 25) - 1) & word
+    uint32_t splitInstruction[] = {
+            word >> 31,                 // sf
+            0b1  & (word >> 30),        // bit
+            0b1111 & (word >> 26),      // op0+
+            ((2 << 25) - 1) & word      // operand
     };
     assert(splitInstruction[2] == 5);
 
