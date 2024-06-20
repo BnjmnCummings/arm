@@ -2,6 +2,7 @@
 #include "parser.h"
 
 static FILE *in;
+static bool comment = false;
 
 #define INC_ADDR(addr) (addr += 4)
 
@@ -12,6 +13,41 @@ static bool is_label(char *line) {
         return true;
     } else {
         return false;
+    }
+}
+
+static void remove_comments(char *line) {
+    char *hold = line;
+    char *comstart = NULL;
+    while (hold != NULL) {
+        if (comment) {
+            hold = strstr(line, "*/");
+            if (hold != NULL) {
+                if (comstart != NULL) {
+                    strcpy(comstart, hold + 2);
+                    comstart = NULL;
+                } else {
+                    strcpy(line, hold + 2);
+                }
+                comment = false;
+            }
+        } else {
+            hold = strstr(line, "/*");
+            if (hold != NULL) {
+                comstart = hold;
+                comment = true;
+            }
+
+        }
+    }
+    if (comstart != NULL) {
+        strcpy(comstart, "");
+    }
+    if (!comment) {
+        char *linecom = strstr(line, "//");
+        if (linecom != NULL) {
+            strcpy(linecom, "");
+        }
     }
 }
 
@@ -27,7 +63,7 @@ void init_file_reader(char * filename) {
 //'line function' that handles the "first pass".
 //finds labels in line and allocates them memory addresses in the symbol table
 void read_symbol(char *buffer, int *addr) {
-    if (buffer[0] != '\0' && strncmp(buffer, "//", 2) != 0) {
+    if (buffer[0] != '\0') {
         if (is_label(buffer)) {
             buffer[strlen(buffer) - 1] = '\0';
             store_symbol(buffer, *addr);
@@ -40,7 +76,7 @@ void read_symbol(char *buffer, int *addr) {
 //'line function' that handles the "second pass".
 //passes each line into the parser to be converted into an instruction
 void read_line(char *buffer, int *addr) {
-    if (!is_label(buffer) && buffer[0] != '\0' && strncmp(buffer, "//", 2) != 0) {
+    if (!is_label(buffer) && buffer[0] != '\0') {
         parse_line(buffer, *addr);
         INC_ADDR(*addr);
     }
@@ -53,6 +89,8 @@ void read_file(void (*read_func)(char *, int *)) {
 
     while( fgets(buffer, MAX_LINE_LENGTH, in) != NULL ) {
         buffer[strcspn(buffer, "\n")] = '\0';
+        remove_comments(buffer);
+
         (*read_func)(buffer, &addr);
     }
 
