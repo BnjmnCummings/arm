@@ -5,7 +5,7 @@
 
 #define INITIAL_CAP 10
 #define MAX_SYMLEN 512
-#define SYMBOL_NOTFOUND -1
+#define SYMBOL_NOTFOUND (-1)
 
 typedef char label[MAX_SYMLEN];
 

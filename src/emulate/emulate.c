@@ -14,7 +14,7 @@ uint64_t get_mask(int start, int end) {
 }
 
 // loads binary data from given filename into memory
-bool binaryFileLoader(char *fileName){
+static bool binaryFileLoader(char *fileName){
 
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
@@ -34,7 +34,7 @@ bool binaryFileLoader(char *fileName){
 
 
 // simulates the FDE cycle, return 0 on a successful halt and an error code on failure
-int fDECycle(void){
+static int fDECycle(void){
     while (true){
         // Fetch
         uint32_t pcValue = CPU.PC;

@@ -5,7 +5,7 @@
 #define INSTR_SIZE 4 // 4 bytes
 
 extern void init_file_writer(char *filename);
-extern void write_instruction(int32_t word);
+extern void write_instruction(uint32_t word);
 extern void w_close(void);
 
 #endif //ARMV8_31_ASS_FILE_WRITER_H

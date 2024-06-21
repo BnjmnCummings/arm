@@ -12,7 +12,7 @@ void init_file_writer(char *filename) {
 }
 
 //invokes 'fwrite()' with appropriate arguments
-void write_instruction(int32_t word) {
+void write_instruction(uint32_t word) {
     fwrite(&word, INSTR_SIZE,  1, out);
     if( ferror(out) ) {
         fprintf( stderr, "Error occurred writing to file\n");

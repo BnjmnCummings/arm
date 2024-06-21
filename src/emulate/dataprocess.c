@@ -257,7 +257,7 @@ bool decode_data_immediate(uint32_t word) {
             break;
         }
             // wide move
-        case (5): {
+        case (0b101): {
             wideMoveInstruction(splitInstruction);
             break;
         }
