@@ -4,18 +4,305 @@
 
 \begin{document}
 
-\title{Our Extension...}
-\author{TODO}
+\title{C Project Final Report}
+\author{Bruce Chen, Benjamin Cummings, Frederick Nunn, Eli Gilbert}
 
 \maketitle
 
-\section{Introduction}
+\section{Implementation}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+\subsection{Introduction}
+
+Our assembler utilizes a two-pass parsing strategy which we designed with help from the 
+specification. Different parts were done loosely and in order as we aimed to first be able to read 
+and write files before processing any data through our assembler itself. In the implementation 
+of parsing and operating on data, we made frequent use of ADTs to efficiently manage interlinked 
+data types and attributes within objects; the most obvious use case of this approach was in the 
+symbol table as advised by the specification, but we extended similar strategies in other 
+parsing methods such as tokenization and binary file-writing. A more in-depth description on 
+each part of our assembler and its working components will be expanded upon below.
+
+The assembly code for Part III mainly comprises of two halting loops contained inside a larger 
+loop that passes each step of the LED switching process onto the next. This loop does not terminate 
+upon any condition after it is entered, thus the preparation of registries and setting of the pins 
+are done before the loop is activated.
+
+\subsection{Assembler}
+
+Our main process is contained inside \verb|assemble.c|. This file merely calls upon 
+smaller methods which complete each step of the assembler functionality. It acts 
+only as an initialization stage for reading files as well as closing them. The bulk 
+of the data processing is handled by \verb|parser.c|.
+
+The reader and writer are instantiated first in the \verb|main()| function, along with an empty 
+symbol table in preparation for the first pass of the input file. \verb|filereader.c| and 
+\verb|filewriter.c| constitute the reading and writing processes, with the latter
+only invoking built-in functions from our main file for accessibility. The reader,
+however, implements a variety of methods which read singular lines, used in different
+cases of both passes. \verb|read_file()| comprises of the overarching loop, which
+reads the input stream line-by-line and feeds each line into another function
+depending on which pass is currently in effect; this allows us to generalize
+both passes and enhance readability.
+
+During the first pass, \verb|read_file()| uses \verb|read_symbol()| to run through
+each input line. A boolean check via \verb|is_label()| allows us to ignore parsing in
+lines that are not label names in the first pass and instead increment our memory address
+value by a global step of four. Lines that are label names are then passed into our
+symbol table, defined inside \verb|symtable.c|. As the table had been initialized and
+its initial memory fully allocated earlier, through \verb|store_symbol()| we now store each 
+label and its equivalent address inside the table's dynamic array. In the case of an input
+with many labels, our symbol table abstract datatype is designed to periodically check for
+overflow when in that case it doubles its capacity and reallocates its memory in 
+\verb|resize()|. After one loop through the input file, all labels are stored inside the
+symbol table and we return to the start of the file for the second and final pass.
+
+The second pass is managed by the same function but instead calls \verb|read_line()| to
+now parse every non-label line with \verb|parse_line()| in \verb|parser.c|. Our tokenizer,
+which we have created a data structure for inside \verb|tokenizer.c|, dissects the line into 
+its fundamental elements when invoking \verb|tokenize()|. Using a  \verb|tokenized_line| 
+object allows the parsing method to easily access the instruction type and list of tokens by 
+means of accessing the attribute and indexing. While the tokens are being split, we also take 
+into account the number of tokens read in on this line, as this information aids in switching 
+through instructions later on in the final parsing step. 
+
+Following tokenization, tokens that were extracted as labels are then further replaced
+by their respective addresses in memory through \verb|get_address()|. It is important to
+note that for the sake of uniformity, instead of storing the address which is by nature an
+\verb|int|, we format it to include the pound symbol and restore it into the token list as
+a string. At this point as the list of tokens contains only registry values or constants, we
+can finally match a binary conversion function to this particular line by matching its 
+instruction type. This is streamlined through \verb|funtable.c| which contains a map that 
+pairs each type to a function pointer which cases through one of the basic instruction 
+categories. Invoking \verb|get_bin_function()| fetches the corresponding function, which
+is then run with the instruction type as input. The handlers then contain separate switches 
+based off the type string and number of tokens to correctly convert each token to binary and
+join them together. This heavily utilizes strategic bit-wise shifting and masking, the full
+implementation and supplementary documentation of which can be found inside 
+\verb|binbuilder.c|. These binary constructor functions output the full binary
+representations of a given instruction directly, so after type identification and matching
+a function pointer, the result is ready to be written with \verb|write_instruction()| which 
+automatically formats to little-endian. Afterwards, the memory allocated to the tokenized line 
+is no longer of use and can then be freed. This process is repeated for each non-label line 
+until the end of the file is reached, where we then have successfully built the binary output 
+file. Thus, we can now close the input file free the previously allocated memory for our 
+symbol table.
+
+It should be also noted that \verb|util.c| contains a number of simple helper functions to
+assist the logic and operations inside \verb|binbuilder.c|. These include various conversions 
+between different integer and string representations of registry and memory values, which 
+proved to be instrumental in preserving uniformity during bit-wise operations.
+
+\subsection{Raspberry Pi}
+
+The code works in two stages. First, the registers are all correctly initiated with the values 
+that will be needed for subsequent operations. Then, a loop continuously turns the light on, 
+waits, turns it off, waits again for a second time, and then repeats.
+
+The starting lines initialise the registers stored: the addresses of \verb|GPIO|, \verb|GPSET|, 
+and \verb|GPCLR|. Some stores overwrite previous stored addresses as they were only needed 
+once during the execution. They also store constant values needed for setting pin status as 
+well as wait and decrement numbers. The loop then works by storing the value of the second pin 
+in the \verb|GPSET| address, and then copying the large value into another register and 
+decrementing it until it reaches zero to cause a wait. Finally, it stores the second pin's 
+value in the \verb|GPCLR| address, and waiting again and then restarting.
+
+\subsection{Extension}
+
+For our Part IV extension, we decided to implement the ability to comment in assembly code for 
+our assembler. We started by doing a simple check at the start of each line for a double slash, 
+and ignoring the code if it is found. To add the ability to include block comments, we created 
+a function that filters any characters contained in a ``\verb|/* */|'' block by setting a pointer 
+to the start of the ``\verb|/*|'', and copying the string back from the ``\verb|*/|'' pointer. The 
+extension we completed now provides documentation support, allowing users to make use of double-
+slash comments, inline comments, block comments, and a mix thereof.
+
+\section{Testing}
+
+At nearly every stage of our implementation process, especially at critical junctions in integrating 
+new data structures or upon completion of a major data processing step, we tested our code 
+extensively to ensure correct operation. The testing in these steps required us to not only 
+work manually off of a myriad of example test cases given by the test suite, but also to create 
+our own tests made to catch edge cases from our specific methods. Major testing occurred during 
+encoding the binary construction functions and symbol table label conversion especially as we 
+tried to account for any and all differences in inputs. Towards the end of the development 
+process, we began testing our assembler on the given test suite and added functionality to 
+automatically test through the makefile for optimal accessibility as we needed to test 
+frequently.
+
+Overall, we saw the test suite as robust. With regular testing not only after, but even 
+throughout early iterations of our code, we therefore feel that our assembler executes 
+effectively and fulfills its intended purpose. The general correctness of our compiler is also 
+reflected by our success in both parts III and IV, which were quickly completed without many 
+obstacles.
+
+\section{Challenges}
+
+\subsection{Assembler}
+
+Challenges faced during implementing the assembler were overall minor as our workflow was much 
+better optimized compared to its state during the emulator phase. Debugging hurdles mainly 
+constituted of minute but still impactful mistakes such as handling overflow and signing numbers, 
+forgetting to free memory at correct stages, or typos in constant values during comparison 
+or bit shifting. Adding utility functions and lessening magic number usage solved these complications. 
+The most significant hindrances to identify but easily fixable were unaccounted edge cases in tests 
+with extra whitespace or shifts done at the same time as the instructions.
+
+\subsection{Raspberry Pi}
+
+In the beginning, there were challenges with converting assembly code to work on our compiler 
+instead of the in-built \verb|AArch64 GNU| compiler, and again with minor mistakes in setting 
+values. However, most of the difficulty encountered was during optimization of registry memory 
+usage. This was solved through many sessions of analyzing and refactoring to achieve the 
+desired results.
+
+\subsection{Extension}
+
+The main problems we faced during implementation of comment lines were problems with 
+integration of block comments and when the opener and closer are on different lines. To fix 
+this, we included a static global variable tracking if we are in a comment or not to filter out 
+separate lines, as well as adding a helper function that keeps track of block comment markers.
+
+\section{Group Reflection}
+
+\subsection{Communication}
+
+After learning from the significant roadblocks we encountered in many facets of group work when 
+coding the emulator, we began to communicate more frequently through text along with constant 
+feedback and discussion in person. Many problems we faced with team members being on the wrong 
+page about implementations of different components could easily be solved by actively 
+reaching out to the group text conversation. All group members thus made an increased effort to be available in answering questions at any time during the day.
+
+Another important aspect of communication that was instrumental in building and especially 
+debugging the code was our commitment to proper and extensive documentation of code that we had 
+wrote, whether individually or as a group. This made the refactoring and reformatting process 
+smoother as well, as with in-line explanations for macro and micro processes, segments could be 
+easily isolated and redone.
+
+\subsection{Organization}
+
+The most significant improvement in the efficiency and effectiveness of our group work was a 
+result of an overhaul in group organization following our failures in Part I. Although we have 
+always understood that modulation and file separation is important for many aspects of shared 
+programming and maintainability, we took the wrong approach during the implementation of the 
+emulator. Previously, we had looked to blindly code the entire functionality in one file and 
+then separate into multiple dependencies after, but we quickly realized that this approach 
+exponentially worsened our ability to manage the program with each new line of code.
+
+Instead, we met and all agreed upon an initial outline and structure of our assembler 
+implementation, and then immediately created a multi-file skeleton for group members to work 
+off of. This allowed members to choose and work on separate components independently which 
+aided in productivity and even helped us better understand the whole process. As the entire 
+program had been abstracted and modulated from the beginning, the code was easy for members to 
+read through and manage. Testing was also streamlined through this procedure; individual files 
+could be excluded and included at any time, therefore testing could be done concurrently and 
+provide focused feedback on our implementation and its working pieces.
+
+\subsection{Division of Work}
+
+Eli and Ben created the initial skeleton for the assembler based off of the general structure 
+agreed upon by the entire group. Freddie oversaw most of the \verb|git| commits and merges for 
+the assembler, and also oversaw the implementation of the outlined skeleton. Bruce and Freddie 
+developed the first pass logic, while Ben and Freddie jointly worked on the second pass logic. 
+Ben maintained quality of life changes and refactoring throughout the development process, as 
+well as coding the basic reading and writing functionality. Bruce focused on primarily on 
+providing the abstract data structures. Freddie, with some help from Ben, was the driving force 
+behind the binary conversion logic and casing, as well as serving as the primary debugging.
+
+Eli completed Part III concurrently while other group members focusing on the assembler, 
+initially with help from \verb|AArch64 GNU| but eventually with our own compiler when both the 
+assembler and emulator were fixed and finished. Upon finishing the first three parts, Freddie 
+completed the extension tasks given in the specification. With help from other group members, 
+Bruce wrote the report and Ben prepared the slideshow presentation.
+
+\section{Individual Discussion}
+
+\subsection{Bruce}
+
+I felt that both my individual performance and the group's performance improved massively after 
+learning from our mishaps from the emulator. My foremost weakness had always been my slowness 
+in fully understanding the code, which was not helped by the dysfunctional organization process 
+employed by us. However, this was greatly mitigated in subsequent phases of the project, as 
+properly coding entire working parts of the assembler as opposed to the scattered bits and 
+pieces in the assembler allowed me to immerse myself in the workings of the compiler. 
+Modulating our code and coordinating work properly allowed me to flourish individually and 
+activate my strengths in programming data structures.
+
+Taking on more of a leadership role in organizing and communicating project to-dos during the 
+second phase aided in my ability to write a more extensive report in this iteration and also 
+prepared me to know how to actively contribute to group work. I felt I fit in the group more 
+comfortably when in a system with more pre-planning and a standardized process; establishing an 
+outline will be a foremost priority for me moving forward. The important lessons I gathered on 
+organization and file structure, as well as an introduction to proper \verb|git| usage will 
+carry over and benefit my participation in future projects.
+
+\subsection{Ben}
+
+One thing we learned over the duration of the project was the value of structure, planning and 
+preparation, especially when working as a group. Eager to get started, we began Part I with 
+little to no structure, with Eli writing the bulk of the code into a single file. This made it 
+impossible for others to properly collaborate without causing merge conflicts and stepping over 
+each other's feet. While we had no intention to submit the code in this state, leaving 
+practices such as linting, commenting and testing to the last minute significantly slowed down 
+the debugging process and resulted in Freddie having to completely rebuild emulator from the 
+ground up. Learning from this, I spent time planning out a multi-file structure while Bruce, 
+Freddie and I decided how we would divide up the work. Once all of the components had been 
+completed, the assembler was fully functional and passed all tests by the next day. In the time 
+we freed from debugging, we could work on the Raspberry Pi, further refactoring the emulator, 
+polishing the presentation and adding further commenting and tidiness to our code.
+
+In hindsight, I could have been a better communicator and a more present voice during the early 
+stages of emulator. Another thing I found was that investing time into learning and 
+understanding the C language and the tools available to me resulted in much more productivity 
+as opposed to jumping straight into the problem with no preparation. For most of us, this was 
+the first time programming as a group which presented many different challenges to the work we 
+had done so far this year. I think we all did a good job accommodating for each other and 
+adapting to this style of work by the end of the project.
+
+\subsection{Eli}
+
+When choosing the group, we knew that we wouldn't all be able to work the whole time with 
+other work and plans interfering with such an ideal schedule. As such, we all had to do 
+disproportionate amounts of work into different sections. We also never met before starting to 
+plan how to structure the  emulator, rather we just started coding. I feel this made the 
+emulator take longer and ultimately require a substantial rewrite to be clean and pass all the 
+test cases.
+
+We learned from our mistakes, however, and going into Part II, we met up and planned how I 
+would complete Part III solo whilst the others completed Part II without me. Together, they 
+planned out the structure whilst I worked on planning my part. With this planning we were 
+able to complete these sections quickly, cleanly and efficiently working like a well-oiled 
+machine. We worked so well that my group-mates where able to complete part of an extension, 
+allowing me to use comments within my Part III, which makes my code far more understandable.
+
+After completing the project, it seems my weakness was the fact that I would rush into 
+sections without pre-planning them. This led to unclean and sub-optimal code that may not 
+even work. I also misused \verb|git| a couple of times but have felt my skills improve 
+noticeably through the project. Going into the project, I knew my \verb|git| skills needed 
+work, so this wasn't too shocking; but as I'd never worked on such a wide scale project with 
+others before, I was unaware how important meeting and planning out structure was to the 
+project. In the future, I will continue applying the philosophy of planning thoroughly before 
+starting, as this made such a difference for Parts II \& III.
+
+\subsection{Freddie}
+
+After a shaky start due to scheduling conflicts in the first couple of weeks, we initially 
+started to fall behind slightly, mostly due to poor initial planning and division of work. This 
+led to disjoint parts being built with little regard for how the other parts were being built, 
+and cascaded down to many problems when linking the different parts together, and made debugging harder 
+than it could have been. However, I do believe after the first week, everyone started to work 
+together much better, and although our solution was very buggy at the time of the checkpoint, a 
+group effort meant a fully debugged solution was working within a few days. After learning from 
+our mistakes in Part I, we worked together much better for the assembler, planning the layout 
+and division of work beforehand. This led to very streamlined work; once each part was put 
+together, because of constant communication and planning, the debugging process was a lot 
+simpler and quicker. Additionally, due to deciding to implement Parts II and III concurrently, 
+we managed to finish all parts with time to spare, allowing us to implement the optional
+extension.
+
+Although we got off to a slow start, I believe the group ended up working very well 
+together, and I am happy with how our project turned out. It was clear to me while working on 
+emulator that I did not fully understand how C worked, resulting in writing buggy code that was 
+hard to fix. By making sure I took the time to fully understand C before tackling the 
+assembler, I felt I started writing much more efficient working code.
 
 \end{document}
